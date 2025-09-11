@@ -2438,89 +2438,16 @@ install_script_if_missing
 check_update_status
 show_menu
 
-reading "${LANG[PROMPT_ACTION]}" OPTION
-
-case $OPTION in
-    1)
-        manage_install
-        ;;
-    2)
-        choose_reinstall_type
-        ;;
-    3)
-        show_panel_node_menu
-        ;;
-    4)
-        if [ ! -d "/opt/remnawave" ]; then
-            echo -e "${COLOR_YELLOW}${LANG[NO_PANEL_NODE_INSTALLED]}${COLOR_RESET}"
-            exit 1
-        else
-            show_template_source_options
-            reading "${LANG[CHOOSE_TEMPLATE_OPTION]}" TEMPLATE_OPTION
-            case $TEMPLATE_OPTION in
-                1)
-                    randomhtml "simple"
-                    sleep 2
-                    log_clear
-                    remnawave_reverse
-                    ;;
-                2)
-                    randomhtml "sni"
-                    sleep 2
-                    log_clear
-                    remnawave_reverse
-                    ;;
-                0)
-                    echo -e "${COLOR_YELLOW}${LANG[EXIT]}${COLOR_RESET}"
-                    remnawave_reverse
-                    ;;
-                *)
-                    echo -e "${COLOR_YELLOW}${LANG[INVALID_TEMPLATE_CHOICE]}${COLOR_RESET}"
-                    exit 1
-                    ;;
-            esac
-        fi
-        ;;
-    5)
-        manage_custom_legiz
-        sleep 2
+# Проверка и установка пакетов
+if [ ! -f "${DIR_REMNAWAVE}install_packages" ] || ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1 || ! command -v certbot >/dev/null 2>&1; then
+    install_packages || {
+        echo -e "${COLOR_RED}${LANG[ERROR_INSTALL_DOCKER]}${COLOR_RESET}"
         log_clear
-        remnawave_reverse
-        ;;
-    6)
-        manage_extensions
-        sleep 2
-        log_clear
-        remnawave_reverse
-        ;;
-    7)
-        manage_ipv6
-        sleep 2
-        log_clear
-        remnawave_reverse
-        ;;
-    8)
-        manage_certificates
-        sleep 2
-        log_clear
-        remnawave_reverse
-        ;;
-    9)
-        update_remnawave_reverse
-        sleep 2
-        log_clear
-        remnawave_reverse
-        ;;
-    10)
-        remove_script
-        ;;
-    0)
-        echo -e "${COLOR_YELLOW}${LANG[EXIT]}${COLOR_RESET}"
-        exit 0
-        ;;
-    *)
-        echo -e "${COLOR_YELLOW}${LANG[INVALID_CHOICE]}${COLOR_RESET}"
         exit 1
-        ;;
-esac
+    }
+fi
+
+# Запуск установки панели
+installation_panel
+log_clear
 exit 0
