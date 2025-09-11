@@ -910,30 +910,29 @@ log_entry() {
   exec > >(tee -a "$LOGFILE") 2>&1
 }
 
-spinner() {
-  local pid=$1
-  local text=$2
+generate_user() {
+    local length=8
+    tr -dc 'a-zA-Z' < /dev/urandom | fold -w $length | head -n 1
+}
 
-  export LC_ALL=en_US.UTF-8
-  export LANG=en_US.UTF-8
+generate_password() {
+    local length=24
+    local password=""
+    local upper_chars='A-Z'
+    local lower_chars='a-z'
+    local digit_chars='0-9'
+    local special_chars='!@#%^&*()_+'
+    local all_chars='A-Za-z0-9!@#%^&*()_+'
 
-  local spinstr='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
-  local text_code="$COLOR_GREEN"
-  local bg_code=""
-  local effect_code="\033[1m"
-  local delay=0.1
-  local reset_code="$COLOR_RESET"
+    password+=$(head /dev/urandom | tr -dc "$upper_chars" | head -c 1)
+    password+=$(head /dev/urandom | tr -dc "$lower_chars" | head -c 1)
+    password+=$(head /dev/urandom | tr -dc "$digit_chars" | head -c 1)
+    password+=$(head /dev/urandom | tr -dc "$special_chars" | head -c 3)
+    password+=$(head /dev/urandom | tr -dc "$all_chars" | head -c $(($length - 6)))
 
-  printf "${effect_code}${text_code}${bg_code}%s${reset_code}" "$text" > /dev/tty
+    password=$(echo "$password" | fold -w1 | shuf | tr -d '\n')
 
-  while kill -0 "$pid" 2>/dev/null; do
-    for (( i=0; i<${#spinstr}; i++ )); do
-      printf "\r${effect_code}${text_code}${bg_code}[%s] %s${reset_code}" "$(echo -n "${spinstr:$i:1}")" "$text" > /dev/tty
-      sleep $delay
-    done
-  done
-
-  printf "\r\033[K" > /dev/tty
+    echo "$password"
 }
 
 install_packages() {
@@ -2419,291 +2418,6 @@ EOL
     echo -e "${COLOR_YELLOW}=================================================${COLOR_RESET}"
     echo -e "${COLOR_RED}${LANG[POST_PANEL_INSTRUCTION]}${COLOR_RESET}"
 }
-#Install Panel
-
-#Install Node
-install_remnawave_node() {
-    mkdir -p /opt/remnawave && cd /opt/remnawave
-
-    reading "${LANG[SELFSTEAL]}" SELFSTEAL_DOMAIN
-
-    check_domain "$SELFSTEAL_DOMAIN" true false
-    local domain_check_result=$?
-    if [ $domain_check_result -eq 2 ]; then
-        echo -e "${COLOR_RED}${LANG[ABORT_MESSAGE]}${COLOR_RESET}"
-        exit 1
-    fi
-
-    while true; do
-        reading "${LANG[PANEL_IP_PROMPT]}" PANEL_IP
-        if echo "$PANEL_IP" | grep -E '^([0-9]{1,3}\.){3}[0-9]{1,3}$' >/dev/null && \
-           [[ $(echo "$PANEL_IP" | tr '.' '\n' | wc -l) -eq 4 ]] && \
-           [[ ! $(echo "$PANEL_IP" | tr '.' '\n' | grep -vE '^[0-9]{1,3}$') ]] && \
-           [[ ! $(echo "$PANEL_IP" | tr '.' '\n' | grep -E '^(25[6-9]|2[6-9][0-9]|[3-9][0-9]{2})$') ]]; then
-            break
-        else
-            echo -e "${COLOR_RED}${LANG[IP_ERROR]}${COLOR_RESET}"
-        fi
-    done
-
-    echo -n "$(question "${LANG[CERT_PROMPT]}")"
-    CERTIFICATE=""
-    while IFS= read -r line; do
-        if [ -z "$line" ]; then
-            if [ -n "$CERTIFICATE" ]; then
-                break
-            fi
-        else
-            CERTIFICATE="$CERTIFICATE$line\n"
-        fi
-    done
-
-    echo -e "${COLOR_YELLOW}${LANG[CERT_CONFIRM]}${COLOR_RESET}"
-    read confirm
-    echo
-
-    if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
-        echo -e "${COLOR_RED}${LANG[ABORT_MESSAGE]}${COLOR_RESET}"
-        exit 1
-    fi
-
-cat > .env-node <<EOL
-### APP ###
-APP_PORT=2222
-
-### XRAY ###
-$(echo -e "$CERTIFICATE" | sed 's/\\n$//')
-EOL
-
-SELFSTEAL_BASE_DOMAIN=$(extract_domain "$SELFSTEAL_DOMAIN")
-
-unique_domains["$SELFSTEAL_BASE_DOMAIN"]=1
-
-cat > docker-compose.yml <<EOL
-services:
-  remnawave-nginx:
-    image: nginx:1.28
-    container_name: remnawave-nginx
-    hostname: remnawave-nginx
-    restart: always
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-EOL
-}
-
-installation_node() {
-    echo -e "${COLOR_YELLOW}${LANG[INSTALLING_NODE]}${COLOR_RESET}"
-    sleep 1
-
-    declare -A unique_domains
-    install_remnawave_node
-
-    declare -A domains_to_check
-    domains_to_check["$SELFSTEAL_DOMAIN"]=1
-
-    handle_certificates domains_to_check "$CERT_METHOD" "$LETSENCRYPT_EMAIL"
-
-    if [ -z "$CERT_METHOD" ]; then
-        local base_domain=$(extract_domain "$SELFSTEAL_DOMAIN")
-        if [ -d "/etc/letsencrypt/live/$base_domain" ] && is_wildcard_cert "$base_domain"; then
-            CERT_METHOD="1"
-        else
-            CERT_METHOD="2"
-        fi
-    fi
-
-    if [ "$CERT_METHOD" == "1" ]; then
-        local base_domain=$(extract_domain "$SELFSTEAL_DOMAIN")
-        NODE_CERT_DOMAIN="$base_domain"
-    else
-        NODE_CERT_DOMAIN="$SELFSTEAL_DOMAIN"
-    fi
-
-    cat >> /opt/remnawave/docker-compose.yml <<EOL
-      - /dev/shm:/dev/shm:rw
-      - /var/www/html:/var/www/html:ro
-    command: sh -c 'rm -f /dev/shm/nginx.sock && nginx -g "daemon off;"'
-    network_mode: host
-    depends_on:
-      - remnanode
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '30m'
-        max-file: '5'
-
-  remnanode:
-    image: remnawave/node:latest
-    container_name: remnanode
-    hostname: remnanode
-    restart: always
-    network_mode: host
-    env_file:
-      - path: /opt/remnawave/.env-node
-        required: false
-    volumes:
-      - /dev/shm:/dev/shm:rw
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '30m'
-        max-file: '5'
-EOL
-
-cat > /opt/remnawave/nginx.conf <<EOL
-map \$http_upgrade \$connection_upgrade {
-    default upgrade;
-    ""      close;
-}
-
-ssl_protocols TLSv1.2 TLSv1.3;
-ssl_ecdh_curve X25519:prime256v1:secp384r1;
-ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-CHACHA20-POLY1305;
-ssl_prefer_server_ciphers on;
-ssl_session_timeout 1d;
-ssl_session_cache shared:MozSSL:10m;
-ssl_session_tickets off;
-
-server {
-    server_name $SELFSTEAL_DOMAIN;
-    listen unix:/dev/shm/nginx.sock ssl proxy_protocol;
-    http2 on;
-
-    ssl_certificate "/etc/nginx/ssl/$NODE_CERT_DOMAIN/fullchain.pem";
-    ssl_certificate_key "/etc/nginx/ssl/$NODE_CERT_DOMAIN/privkey.pem";
-    ssl_trusted_certificate "/etc/nginx/ssl/$NODE_CERT_DOMAIN/fullchain.pem";
-
-    root /var/www/html;
-    index index.html;
-}
-
-server {
-    listen unix:/dev/shm/nginx.sock ssl proxy_protocol default_server;
-    server_name _;
-    ssl_reject_handshake on;
-    return 444;
-}
-EOL
-
-    ufw allow from $PANEL_IP to any port 2222 > /dev/null 2>&1
-    ufw reload > /dev/null 2>&1
-
-    echo -e "${COLOR_YELLOW}${LANG[STARTING_NODE]}${COLOR_RESET}"
-    sleep 3
-    cd /opt/remnawave
-    docker compose up -d > /dev/null 2>&1 &
-
-    spinner $! "${LANG[WAITING]}"
-
-    randomhtml
-
-    printf "${COLOR_YELLOW}${LANG[NODE_CHECK]}${COLOR_RESET}\n" "$SELFSTEAL_DOMAIN"
-    local max_attempts=5
-    local attempt=1
-    local delay=15
-
-    while [ $attempt -le $max_attempts ]; do
-        printf "${COLOR_YELLOW}${LANG[NODE_ATTEMPT]}${COLOR_RESET}\n" "$attempt" "$max_attempts"
-        if curl -s --fail --max-time 10 "https://$SELFSTEAL_DOMAIN" | grep -q "html"; then
-            echo -e "${COLOR_GREEN}${LANG[NODE_LAUNCHED]}${COLOR_RESET}"
-            break
-        else
-            printf "${COLOR_RED}${LANG[NODE_UNAVAILABLE]}${COLOR_RESET}\n" "$attempt"
-            if [ $attempt -eq $max_attempts ]; then
-                printf "${COLOR_RED}${LANG[NODE_NOT_CONNECTED]}${COLOR_RESET}\n" "$max_attempts"
-                echo -e "${COLOR_YELLOW}${LANG[CHECK_CONFIG]}${COLOR_RESET}"
-                exit 1
-            fi
-            sleep $delay
-        fi
-        ((attempt++))
-    done
-
-}
-#Install Node
-
-#Add Node to Panel
-add_node_to_panel() {
-    local domain_url="127.0.0.1:3000"
-    
-    echo -e ""
-    echo -e "${COLOR_RED}${LANG[WARNING_LABEL]}${COLOR_RESET}"
-    echo -e "${COLOR_YELLOW}${LANG[WARNING_NODE_PANEL]}${COLOR_RESET}"
-    echo -e "${COLOR_YELLOW}${LANG[CONFIRM_SERVER_PANEL]}${COLOR_RESET}"
-    echo -e ""
-    echo -e "${COLOR_GREEN}[?]${COLOR_RESET} ${COLOR_YELLOW}${LANG[CONFIRM_PROMPT]}${COLOR_RESET}"
-    read confirm
-    echo
-
-    if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
-        echo -e "${COLOR_YELLOW}${LANG[EXIT]}${COLOR_RESET}"
-        exit 0
-    fi
-
-    echo -e "${COLOR_YELLOW}${LANG[ADD_NODE_TO_PANEL]}${COLOR_RESET}"
-    sleep 1
-
-    reading "${LANG[ENTER_NODE_DOMAIN]}" SELFSTEAL_DOMAIN
-    
-        while true; do
-        reading "${LANG[ENTER_NODE_NAME]}" entity_name
-        if [[ "$entity_name" =~ ^[a-zA-Z0-9-]+$ ]]; then
-            if [ ${#entity_name} -ge 3 ] && [ ${#entity_name} -le 20 ]; then
-                get_panel_token
-                token=$(cat "$TOKEN_FILE")
-                local response=$(make_api_request "GET" "http://$domain_url/api/config-profiles" "$token")
-                
-                if echo "$response" | jq -e ".response.configProfiles[] | select(.name == \"$entity_name\")" > /dev/null; then
-                    echo -e "${COLOR_RED}$(printf "${LANG[CF_INVALID_NAME]}" "$entity_name")${COLOR_RESET}"
-                else
-                    break
-                fi
-            else
-                echo -e "${COLOR_RED}${LANG[CF_INVALID_LENGTH]}${COLOR_RESET}"
-            fi
-        else
-            echo -e "${COLOR_RED}${LANG[CF_INVALID_CHARS]}${COLOR_RESET}"
-        fi
-    done
-
-    echo -e "${COLOR_YELLOW}${LANG[GENERATE_KEYS]}${COLOR_RESET}"
-    local private_key=$(generate_xray_keys "$domain_url" "$token")
-    printf "${COLOR_GREEN}${LANG[GENERATE_KEYS_SUCCESS]}${COLOR_RESET}\n"
-
-    echo -e "${COLOR_YELLOW}${LANG[CREATING_CONFIG_PROFILE]}${COLOR_RESET}"
-    read config_profile_uuid inbound_uuid <<< $(create_config_profile "$domain_url" "$token" "$entity_name" "$SELFSTEAL_DOMAIN" "$private_key" "$entity_name")
-    echo -e "${COLOR_GREEN}${LANG[CONFIG_PROFILE_CREATED]}: $entity_name${COLOR_RESET}"
-
-    printf "${COLOR_YELLOW}${LANG[CREATE_NEW_NODE]}$SELFSTEAL_DOMAIN${COLOR_RESET}\n"
-    create_node "$domain_url" "$token" "$config_profile_uuid" "$inbound_uuid" "$SELFSTEAL_DOMAIN" "$entity_name"
-
-    echo -e "${COLOR_YELLOW}${LANG[CREATE_HOST]}${COLOR_RESET}"
-    create_host "$domain_url" "$token" "$inbound_uuid" "$SELFSTEAL_DOMAIN" "$config_profile_uuid" "$entity_name"
-
-    echo -e "${COLOR_YELLOW}${LANG[GET_DEFAULT_SQUAD]}${COLOR_RESET}"
-    local squad_uuids=$(get_default_squad "$domain_url" "$token")
-    if [ $? -ne 0 ]; then
-        echo -e "${COLOR_RED}${LANG[ERROR_GET_SQUAD_LIST]}${COLOR_RESET}"
-    elif [ -z "$squad_uuids" ]; then
-        echo -e "${COLOR_YELLOW}${LANG[NO_SQUADS_TO_UPDATE]}${COLOR_RESET}"
-    else
-        for squad_uuid in $squad_uuids; do
-            echo -e "${COLOR_YELLOW}${LANG[UPDATING_SQUAD]} $squad_uuid${COLOR_RESET}"
-            update_squad "$domain_url" "$token" "$squad_uuid" "$inbound_uuid"
-            if [ $? -eq 0 ]; then
-                echo -e "${COLOR_GREEN}${LANG[UPDATE_SQUAD]} $squad_uuid${COLOR_RESET}"
-            else
-                echo -e "${COLOR_RED}${LANG[ERROR_UPDATE_SQUAD]} $squad_uuid${COLOR_RESET}"
-            fi
-        done
-    fi
-
-    echo -e "${COLOR_GREEN}${LANG[NODE_ADDED_SUCCESS]}${COLOR_RESET}"
-    echo -e "${COLOR_RED}-------------------------------------------------${COLOR_RESET}"
-    echo -e "${COLOR_RED}${LANG[POST_PANEL_INSTRUCTION]}${COLOR_RESET}"
-    echo -e "${COLOR_RED}-------------------------------------------------${COLOR_RESET}"
-}
-#Add Node to Panel
 
 log_entry
 
