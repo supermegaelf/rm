@@ -12,13 +12,6 @@ COLOR_GRAY='\033[0;90m'
 
 # Language variables
 declare -A LANG=(
-    #Alias
-    [ALIAS_ADDED]="Alias 'rr' for 'remnawave_reverse' added to %s"
-    [ALIAS_ACTIVATE_GLOBAL]="Alias 'rr' is now available for all users. Run 'source %s' or open a new terminal to apply."
-    #Lang
-    [CHOOSE_LANG]="Select language:"
-    [LANG_EN]="English"
-    [LANG_RU]="Русский"
     #check
     [ERROR_ROOT]="Script must be run as root"
     [ERROR_OS]="Supported only Debian 11/12 and Ubuntu 22.04/24.04"
@@ -41,104 +34,18 @@ declare -A LANG=(
     [ERROR_INSTALL_CERTBOT]="Error: Failed to install certbot"
     [SUCCESS_INSTALL]="All packages installed successfully"
     #Menu
-    [MENU_TITLE]="REMNAWAVE REVERSE-PROXY by eGames"
-    [AVAILABLE_UPDATE]="update available"
-    [VERSION_LABEL]="Version: %s"
     [EXIT]="Exit"
-    [MENU_1]="Install Remnawave Components"
-    [MENU_2]="Reinstall panel/node"
-    [MENU_3]="Manage Panel/Node"
-    [MENU_4]="Install random template for selfsteal node"
-    [MENU_5]="Custom Templates by legiz"
-    [MENU_6]="Extensions by distillium"
-    [MENU_7]="Manage IPv6"
-    [MENU_8]="Manage certificates domain"
-    [MENU_9]="Check for updates script"
-    [MENU_10]="Remove script"
-    [PROMPT_ACTION]="Select action (0-10):"
-    [INVALID_CHOICE]="Invalid choice. Please select 0-10"
     [WARNING_LABEL]="WARNING:"
     [CONFIRM_PROMPT]="Enter 'y' to continue or 'n' to exit (y/n):"
     [WARNING_NODE_PANEL]="Adding a node should only be done on the server where the panel is installed, not on the node server."
     [CONFIRM_SERVER_PANEL]="Are you sure you are on the server with the installed panel?"
-    #Remove Script
-    [REMOVE_SCRIPT_ONLY]="Remove script and its local files"
-    [REMOVE_SCRIPT_AND_PANEL]="Remove script and remnawave panel/node data"
-    [CONFIRM_REMOVE_SCRIPT]="All script data will be removed from the server. Are you sure? (y/n): "
-    [CONFIRM_REMOVE_ALL]="All script and panel/node data will be removed from the server. Are you sure? (y/n): "
-    [SCRIPT_REMOVED]="Script and its local files successfully removed!"
-    [ALL_REMOVED]="Script and panel/node data successfully removed!"
-    #Extensions by distillium
-    [EXTENSIONS_MENU]="Extensions by distillium"
-    [EXTENSIONS_MENU_TITLE]="Manage Extensions by distillium"
-    [EXTENSIONS_PROMPT]="Select action (0-2):"
-    [EXTENSIONS_INVALID_CHOICE]="Invalid choice. Please select 0-2."
-    [BACKUP_RESTORE]="Backup and Restore"
-    #Warp by distillium
-    [WARP_MENU]="WARP Native"
-    [WARP_MENU_TITLE]="Manage WARP Native"
-    [WARP_INSTALL]="Install WARP Native"
-    [WARP_ADD_CONFIG]="Add WARP-configuration to node configuration"
-    [WARP_DELETE_WARP_SETTINGS]="Remove WARP-configuration from node configuration"
-    [WARP_CONFIRM_SERVER_PANEL]="Are you sure you are on the server with the installed panel?\nAdding WARP-configuration should only be done on the server where the panel is installed, not on the node server"
-    [WARP_UNINSTALL]="Uninstall WARP Native"
-    [WARP_PROMPT]="Select action (0-4):"
-    [WARP_PROMPT1]="Select action:"
-    [WARP_INVALID_CHOICE]="Invalid choice. Please select 0-4."
-    [WARP_INVALID_CHOICE2]="Invalid choice."
-    [WARP_NO_NODE]="Node Remnawave not found. First install the node."
-    [WARP_SELECT_CONFIG]="Select node to add WARP-configuration?"
-    [WARP_SELECT_CONFIG_DELETE]="Select node to remove WARP-configuration?"
-    [WARP_NO_CONFIGS]="No configurations found."
-    [WARP_UPDATE_SUCCESS]="Configuration successfully updated!"
-    [WARP_UPDATE_FAIL]="Failed to update configuration."
-    [WARP_WARNING]="warp-out already exists in outbounds."
-    [WARP_WARNING2]="warp rule already exists in routing rules."
-    [WARP_REMOVED_WARP_SETTINGS1]="Removed warp-out from outbounds"
-    [WARP_NO_WARP_SETTINGS1]="warp-out not found in outbounds"
-    [WARP_REMOVED_WARP_SETTINGS2]="Removed warp rule from routing rules"
-    [WARP_NO_WARP_SETTINGS2]="warp rule not found in routing rules"
-    #Manage Panel/Node
-    [START_PANEL_NODE]="Start panel/node"
-    [STOP_PANEL_NODE]="Stop panel/node"
-    [UPDATE_PANEL_NODE]="Update panel/node"
-    [VIEW_LOGS]="View logs"
-    [PRESS_ENTER_RETURN_MENU]="Press Enter to return to the menu..."
-    [REMNAWAVE_CLI]="Remnawave CLI"
-    [ACCESS_PANEL]="Access panel via port 8443 (Only for panel + node)"
-    [MANAGE_PANEL_NODE_PROMPT]="Select action (0-6):"
-    [MANAGE_PANEL_NODE_INVALID_CHOICE]="Invalid choice. Please select 0-6."
     #Manage Certificates
-    [CERT_UPDATE]="Update current certificates"
-    [CERT_GENERATE]="Generate new certificates for another domain"
-    [CERT_PROMPT1]="Select action (0-2):"
     [CERT_INVALID_CHOICE]="Invalid choice. Please select 0-2."
-    [CERT_UPDATE_CHECK]="Checking certificate generation method..."
-    [CERT_UPDATE_SUCCESS]="Certificates successfully updated."
-    [CERT_UPDATE_FAIL]="Failed to update certificates."
-    [CERT_GENERATE_PROMPT]="Enter the domain for new certificates (e.g., example.com):"
-    [CERT_METHOD_UNKNOWN]="Unknown certificate generation method."
-    [CERT_NOT_DUE]="Certificate for %s is not yet due for renewal."
     #Install Remnawave Components
-    [INSTALL_MENU_TITLE]="Install Remnawave Components"
-    [INSTALL_PANEL_NODE]="Install panel and node on one server"
     [INSTALL_PANEL]="Install only the panel"
-    [INSTALL_ADD_NODE]="Add node to panel"
     [INSTALL_NODE]="Install only the node"
-    [INSTALL_PROMPT]="Select action (0-3):"
-    [INSTALL_INVALID_CHOICE]="Invalid choice. Please select 0-3."
-    #Manage IPv6
-    [IPV6_MENU_TITLE]="Manage IPv6"
-    [IPV6_ENABLE]="Enable IPv6"
-    [IPV6_DISABLE]="Disable IPv6"
-    [IPV6_PROMPT]="Select action (0-2):"
-    [IPV6_INVALID_CHOICE]="Invalid choice. Please select 0-2."
-    [IPV6_ALREADY_ENABLED]="IPv6 already enabled"
-    [IPV6_ALREADY_DISABLED]="IPv6 already disabled"
-    [ENABLE_IPV6]="Enabling IPv6..."
-    [IPV6_ENABLED]="IPv6 has been enabled."
-    [DISABLING_IPV6]="Disabling IPv6..."
-    [IPV6_DISABLED]="IPv6 has been disabled."
+    [INSTALL_PROMPT]="Select action (0-2):"
+    [INSTALL_INVALID_CHOICE]="Invalid choice. Please select 0-2."
     #Remna
     [INSTALL_PACKAGES]="Installing required packages..."
     [INSTALLING]="Installing panel and node"
@@ -181,21 +88,6 @@ declare -A LANG=(
     [ERROR_GET_SQUAD]="Failed to get squad"
     [INVALID_SQUAD_UUID]="Invalid squad UUID"
     [INVALID_INBOUND_UUID]="Invalid inbound UUID"
-    #Stop/Start/Update
-    [CHANGE_DIR_FAILED]="Failed to change to directory %s"
-    [DIR_NOT_FOUND]="Directory /opt/remnawave not found"
-    [PANEL_RUNNING]="Panel/node already running"
-    [PANEL_RUN]="Panel/node running"
-    [PANEL_STOP]="Panel/node stopped"
-    [PANEL_STOPPED]="Panel/node already stopped"
-    [NO_UPDATE]="No updates available for panel/node"
-    [UPDATING]="Updating panel/node..."
-    [UPDATE_SUCCESS1]="Panel/node successfully updated"
-    [STARTING_PANEL_NODE]="Starting panel and node"
-    [STARTING_PANEL]="Starting panel"
-    [STARTING_NODE]="Starting node"
-    [STOPPING_REMNAWAVE]="Stopping panel and node"
-    [IMAGES_DETECTED]="Images detected, restarting containers..."
     #Menu End
     [INSTALL_COMPLETE]="               INSTALLATION COMPLETE!"
     [PANEL_ACCESS]="Panel URL:"
@@ -224,20 +116,13 @@ declare -A LANG=(
     [ERROR_GET_SQUAD_LIST]="Failed to get squad list"
     [NO_SQUADS_TO_UPDATE]="No squads to update"
     #Reinstall Panel/Node
-    [REINSTALL_WARNING]="All data panel/node will be deleted from the server. Are you sure? (y/n):"
-    [REINSTALL_TYPE_TITLE]="Select reinstallation method:"
-    [REINSTALL_PROMPT]="Select action (0-3):"
-    [INVALID_REINSTALL_CHOICE]="Invalid choice. Please select 0-3."
-    [POST_PANEL_MESSAGE]="Panel successfully installed!"
     [POST_PANEL_INSTRUCTION]="To install the node, follow these steps:\n1. Run this script on the server where the node will be installed.\n2. Select 'Install Remnawave Components', then 'Install only the node'."
-    [SELFSTEAL_PROMPT]="Enter the selfsteal domain for the node (e.g. node.example.com):"
     [SELFSTEAL]="Enter the selfsteal domain for the node specified during panel installation:"
     [PANEL_IP_PROMPT]="Enter the IP address of the panel to establish a connection between the panel and the node:"
     [IP_ERROR]="Enter a valid IP address in the format X.X.X.X (e.g., 192.168.1.1)"
     [CERT_PROMPT]="Enter the certificate obtained from the panel, keeping the SSL_CERT= line (paste the content and press Enter twice):"
     [CERT_CONFIRM]="Are you sure the certificate is correct? (y/n):"
     [ABORT_MESSAGE]="Installation aborted by user"
-    [SUCCESS_MESSAGE]="Node successfully connected"
     #Node Check
     [NODE_CHECK]="Checking node connection for %s..."
     [NODE_ATTEMPT]="Attempt %d of %d..."
@@ -260,7 +145,6 @@ declare -A LANG=(
     [CF_INVALID_LENGTH]="Error: The name of the configuration profile should contain from 3 to 20 characters."
     [CF_INVALID_CHARS]="Error: The name of the configuration profile should contain only English letters, numbers, and hyphens."
     #check
-    [CHECK_UPDATE]="Check for updates"
     [GENERATING_CERTS]="Generating certificates for %s"
     [REQUIRED_DOMAINS]="Required domains for certificates:"
     [CHECK_DOMAIN_IP_FAIL]="Failed to determine the domain or server IP address."
@@ -269,30 +153,11 @@ declare -A LANG=(
     [CHECK_DOMAIN_CLOUDFLARE_INSTRUCTION]="Cloudflare proxying is not allowed for the selfsteal domain. Disable proxying (switch to 'DNS Only')."
     [CHECK_DOMAIN_MISMATCH]="The domain %s points to IP address %s, which differs from this server's IP (%s)."
     [CHECK_DOMAIN_MISMATCH_INSTRUCTION]="For proper operation, the domain must point to the current server."
-    [NO_PANEL_NODE_INSTALLED]="Panel or node is not installed. Please install panel or node first."
-    #update
-    [UPDATE_AVAILABLE]="A new version of the script is available: %s (current version: %s)."
-    [UPDATE_CONFIRM]="Update the script? (y/n):"
-    [UPDATE_CANCELLED]="Update cancelled by user."
-    [UPDATE_SUCCESS]="Script successfully updated to version %s!"
-    [UPDATE_FAILED]="Error downloading the new version of the script."
-    [VERSION_CHECK_FAILED]="Could not determine the version of the remote script. Skipping update."
-    [LATEST_VERSION]="You already have the latest version of the script (%s)."
-    [RESTART_REQUIRED]="Please restart the script to apply changes."
-    [LOCAL_FILE_NOT_FOUND]="Local script file not found, downloading new version..."
-    #CLI
-    [RUNNING_CLI]="Running Remnawave CLI..."
-    [CLI_SUCCESS]="Remnawave CLI executed successfully!"
-    [CLI_FAILED]="Failed to execute Remnawave CLI. Ensure the 'remnawave' container is running."
-    [CONTAINER_NOT_RUNNING]="Container 'remnawave' is not running. Please start it first."
     #Cert_choise
     [CERT_METHOD_PROMPT]="Select certificate generation method for all domains:"
     [CERT_METHOD_CF]="Cloudflare API (supports wildcard)"
-    [CERT_METHOD_ACME]="ACME HTTP-01 (single domain, no wildcard)"
     [CERT_METHOD_CHOOSE]="Select option (0-2):"
-    [EMAIL_PROMPT]="Enter your email for Let's Encrypt registration:"
     [CERTS_SKIPPED]="All certificates already exist. Skipping generation."
-    [ACME_METHOD]="Using ACME (Let's Encrypt) with HTTP-01 challenge (no wildcard support)..."
     [CERT_GENERATION_FAILED]="Certificate generation failed. Please check your input and DNS settings."
     [ADDING_CRON_FOR_EXISTING_CERTS]="Adding cron job for certificate renewal..."
     [CRON_ALREADY_EXISTS]="Cron job for certificate renewal already exists."
@@ -311,120 +176,6 @@ declare -A LANG=(
     [SNI_TEMPLATES]="Sni templates"
     [CHOOSE_TEMPLATE_OPTION]="Select option (0-2):"
     [INVALID_TEMPLATE_CHOICE]="Invalid choice. Please select 0-2."
-    # Manage Panel Access
-    [PORT_8443_OPEN]="Open port 8443 for panel access"
-    [PORT_8443_CLOSE]="Close port 8443 for panel access"
-    [PORT_8443_IN_USE]="Port 8443 already in use by another process. Check which services are using the port and free it."
-    [NO_PORT_CHECK_TOOLS]="Port checking tools (ss or netstat) not found. Install one of them."
-    [OPEN_PANEL_LINK]="Your panel access link:"
-    [PORT_8443_WARNING]="Don't forget, port 8443 is now open to the world. After fixing the panel, select the option to close port 8443."
-    [PORT_8443_CLOSED]="Port 8443 has been closed."
-    [NGINX_CONF_NOT_FOUND]="File nginx.conf not found in $dir"
-    [NGINX_CONF_ERROR]="Failed to extract necessary parameters from nginx.conf"
-    [NGINX_CONF_MODIFY_FAILED]="Failed to modify nginx.conf"
-    [PORT_8443_ALREADY_CONFIGURED]="Port 8443 already configured in nginx.conf"
-    [UFW_RELOAD_FAILED]="Failed to reload UFW."
-    [PORT_8443_ALREADY_CLOSED]="Port 8443 already closed in UFW."
-    #Legiz Extensions
-    [LEGIZ_EXTENSIONS_PROMPT]="Select action (0-3):"
-    # Sub Page Upload
-    [UPLOADING_SUB_PAGE]="Uploading custom sub page template..."
-    [ERROR_FETCH_SUB_PAGE]="Failed to fetch custom sub page template."
-    [SUB_PAGE_UPDATED_SUCCESS]="Custom sub page template successfully updated."
-    [SELECT_SUB_PAGE_CUSTOM]="Select action (0-7):"
-    [SELECT_SUB_PAGE_CUSTOM1]="Custom Sub Page Templates"
-    [SELECT_SUB_PAGE_CUSTOM2]="Custom Sub Page Templates\nOnly run on panel server"
-    [SELECT_SUB_PAGE_CUSTOM3]="Custom App Lists for original sub page:"
-    [SELECT_SUB_PAGE_CUSTOM4]="Custom Sub Page:"
-    [SUB_PAGE_SELECT_CHOICE]="Invalid choice. Please select 0-7."
-    [RESTORE_SUB_PAGE]="Restore default sub page"
-    [CONTAINER_NOT_FOUND]="Container %s not found"
-    [SUB_WITH_APPCONFIG_ASK]="Do you want to include app-config.json?"
-    [SUB_WITH_APPCONFIG_OPTION1]="Yes, use config from option 1 (Simple custom app list)"
-    [SUB_WITH_APPCONFIG_OPTION2]="Yes, use config from option 2 (Multiapp custom app list)"
-    [SUB_WITH_APPCONFIG_OPTION3]="Yes, use config from option 3 (HWID only app list)"
-    [SUB_WITH_APPCONFIG_SKIP]="No, skip app-config.json"
-    [SUB_WITH_APPCONFIG_INVALID]="Invalid option, skipping app-config.json"
-    [SUB_WITH_APPCONFIG_INPUT]="Select action (0-3):"
-    # Custom Branding
-    [BRANDING_SUPPORT_ASK]="Add branding support to subscription page?"
-    [BRANDING_SUPPORT_YES]="Yes, add branding support"
-    [BRANDING_SUPPORT_NO]="No, skip branding"
-    [BRANDING_NAME_PROMPT]="Enter your brand name:"
-    [BRANDING_SUPPORT_URL_PROMPT]="Enter your support page URL:"
-    [BRANDING_LOGO_URL_PROMPT]="Enter your brand logo URL:"
-    [BRANDING_ADDED_SUCCESS]="Branding configuration successfully added"
-    [CUSTOM_APP_LIST_MENU]="Edit custom application list and branding"
-    [CUSTOM_APP_LIST_NOT_FOUND]="Custom application list not found"
-    [EDIT_BRANDING]="Edit branding"
-    [EDIT_LOGO]="Change logo"
-    [EDIT_NAME]="Change name in branding"
-    [EDIT_SUPPORT_URL]="Change support link"
-    [DELETE_APPS]="Delete specific applications"
-    [BRANDING_CURRENT_VALUES]="Current branding values:"
-    [BRANDING_LOGO_URL]="Logo URL:"
-    [BRANDING_NAME]="Name:"
-    [BRANDING_SUPPORT_URL]="Support URL:"
-    [ENTER_NEW_LOGO]="Enter new logo URL:"
-    [ENTER_NEW_NAME]="Enter new brand name:"
-    [ENTER_NEW_SUPPORT]="Enter new support URL:"
-    [CONFIRM_CHANGE]="Confirm change? (y/n):"
-    [PLATFORM_SELECT]="Select platform:"
-    [APP_SELECT]="Which application do you want to delete?"
-    [CONFIRM_DELETE_APP]="Are you sure you want to delete application %s from platform %s? (y/n):"
-    [APP_DELETED_SUCCESS]="Application successfully deleted"
-    [NO_APPS_FOUND]="No applications found in this platform"
-    # Template Upload
-    [TEMPLATE_NOT_APPLIED]="Custom rules template not applied"
-    [UPLOADING_TEMPLATE]="Uploading custom rules template..."
-    [ERROR_FETCH_TEMPLATE]="Failed to fetch custom rules template."
-    [ERROR_EMPTY_RESPONSE_TEMPLATE]="Empty response from API when updating template."
-    [ERROR_UPDATE_TEMPLATE]="Failed to update custom rules template"
-    [TEMPLATE_UPDATED_SUCCESS]="Custom rules template successfully updated."
-    [SELECT_TEMPLATE_CUSTOM]="Select action (0-8):"
-    [SELECT_TEMPLATE_CUSTOM1]="Custom Rules Templates"
-    [SELECT_TEMPLATE_CUSTOM2]="Custom Rules Templates\nOnly run on panel server"
-    [TEMPLATE_SELECT_CHOICE]="Invalid choice. Please select 0-8."
-    [DOWNLOADING_CONFIG_SEED]="Downloading config.seed.ts from GitHub..."
-    [EXTRACT_FAILED]="Failed to extract configuration for %s"
-    [RESTORING_DEFAULT_TEMPLATES]="Restoring default custom rules templates from GitHub..."
-    [DEFAULT_TEMPLATES_COMPLETED]="Default custom rules templates restoration completed"
-    [RESTORING_TEMPLATE]="Restoring default custom rules template for %s..."
-    [TEMPLATE_RESTORED_SUCCESS]="Default custom rules template for %s restored successfully"
-    [URL_NOT_ACCESSIBLE]="URL %s is not accessible (HTTP status: %s)"
-    [FAILED_TO_DOWNLOAD_TEMPLATE]="Failed to download custom rules template %s"
-    [TEMPLATE_EMPTY]="Downloaded custom rules template %s is empty"
-    [INVALID_YAML_TEMPLATE]="Invalid YAML custom rules template for %s"
-    [INVALID_JSON_TEMPLATE]="Invalid JSON custom rules template for %s"
-    [EMPTY_TEMPLATE_VALUE]="Empty custom rules template value for %s"
-    [RESTORE_TEMPLATES]="Restore default custom rules templates"
-    [FAILED_TO_EXTRACT_UUID]="Failed to extract UUID from subscription template"
-    [RENEWAL_CONF_NOT_FOUND]="Renewal configuration file not found."
-    [ARCHIVE_DIR_MISMATCH]="Archive directory mismatch in configuration."
-    [CERT_VERSION_NOT_FOUND]="Failed to determine certificate version."
-    [RESULTS_CERTIFICATE_UPDATES]="Results of certificate updates:"
-    [CERTIFICATE_FOR]="Certificate for "
-    [SUCCESSFULLY_UPDATED]="successfully updated"
-    [FAILED_TO_UPDATE_CERTIFICATE_FOR]="Failed to update certificate for "
-    [ERROR_CHECKING_EXPIRY_FOR]="Error checking expiry date for "
-    [DOES_NOT_REQUIRE_UPDATE]="does not require updating ("
-    [UPDATED]="Updated"
-    [REMAINING]="Remaining"
-    [ERROR_UPDATE]="Error updating"
-    [ALREADY_EXPIRED]="already expired"
-    [CERT_CLOUDFLARE_FILE_NOT_FOUND]="Cloudflare credentials file not found."
-    [TELEGRAM_OAUTH_WARNING]="Telegram OAuth is enabled (TELEGRAM_OAUTH_ENABLED=true)."
-    [CREATE_API_TOKEN_INSTRUCTION]="Go to the panel at: https://%s\nNavigate to 'API Tokens' -> 'Create New Token' and create a token.\nCopy the created token and enter it below."
-    [ENTER_API_TOKEN]="Enter the API token: "
-    [EMPTY_TOKEN_ERROR]="No token provided. Exiting."
-    [RATE_LIMIT_EXCEEDED]="Rate limit exceeded for Let's Encrypt"
-    [FAILED_TO_MODIFY_HTML_FILES]="Failed to modify HTML files"
-    [INSTALLING_YQ]="Installing yq..."
-    [ERROR_SETTING_YQ_PERMISSIONS]="Error setting yq permissions!"
-    [YQ_SUCCESSFULLY_INSTALLED]="yq successfully installed!"
-    [YQ_DOESNT_WORK_AFTER_INSTALLATION]="Error: yq doesn't work after installation!"
-    [ERROR_DOWNLOADING_YQ]="Error downloading yq!"
-    [FAST_START]="Quick start: remnawave_reverse"
 )
 
 question() {
@@ -579,6 +330,134 @@ spinner() {
 
   printf "\r\033[K" > /dev/tty
 }
+
+#Manage Template for steal
+show_template_source_options() {
+    echo -e ""
+    echo -e "${COLOR_GREEN}${LANG[CHOOSE_TEMPLATE_SOURCE]}${COLOR_RESET}"
+    echo -e ""
+    echo -e "${COLOR_YELLOW}1. ${LANG[SIMPLE_WEB_TEMPLATES]}${COLOR_RESET}"
+    echo -e "${COLOR_YELLOW}2. ${LANG[SNI_TEMPLATES]}${COLOR_RESET}"
+    echo -e ""
+    echo -e "${COLOR_YELLOW}0. ${LANG[EXIT]}${COLOR_RESET}"
+    echo -e ""
+}
+
+randomhtml() {
+    local template_source="$1"
+
+    cd /opt/ || { echo "${LANG[UNPACK_ERROR]}"; exit 1; }
+
+    rm -f main.zip 2>/dev/null
+    rm -rf simple-web-templates-main/ sni-templates-main/ 2>/dev/null
+
+    echo -e "${COLOR_YELLOW}${LANG[RANDOM_TEMPLATE]}${COLOR_RESET}"
+    sleep 1
+    spinner $$ "${LANG[WAITING]}" &
+    spinner_pid=$!
+
+    template_urls=(
+        "https://github.com/eGamesAPI/simple-web-templates/archive/refs/heads/main.zip"
+        "https://github.com/SmallPoppa/sni-templates/archive/refs/heads/main.zip"
+    )
+
+    if [ -z "$template_source" ]; then
+        selected_url=${template_urls[$RANDOM % ${#template_urls[@]}]}
+    else
+        if [ "$template_source" = "simple" ]; then
+            selected_url=${template_urls[0]}  # Simple web templates
+        else
+            selected_url=${template_urls[1]}  # Sni templates
+        fi
+    fi
+
+    while ! wget -q --timeout=30 --tries=10 --retry-connrefused "$selected_url"; do
+        echo "${LANG[DOWNLOAD_FAIL]}"
+        sleep 3
+    done
+
+    unzip -o main.zip &>/dev/null || { echo "${LANG[UNPACK_ERROR]}"; exit 0; }
+    rm -f main.zip
+
+    if [[ "$selected_url" == *"eGamesAPI"* ]]; then
+        cd simple-web-templates-main/ || { echo "${LANG[UNPACK_ERROR]}"; exit 0; }
+        rm -rf assets ".gitattributes" "README.md" "_config.yml" 2>/dev/null
+    else
+        cd sni-templates-main/ || { echo "${LANG[UNPACK_ERROR]}"; exit 0; }
+        rm -rf assets "README.md" "index.html" 2>/dev/null
+    fi
+
+    mapfile -t templates < <(find . -maxdepth 1 -type d -not -path . | sed 's|./||')
+
+    RandomHTML="${templates[$RANDOM % ${#templates[@]}]}"
+
+    if [[ "$selected_url" == *"SmallPoppa"* && "$RandomHTML" == "503 error pages" ]]; then
+        cd "$RandomHTML" || { echo "${LANG[UNPACK_ERROR]}"; exit 0; }
+        versions=("v1" "v2")
+        RandomVersion="${versions[$RANDOM % ${#versions[@]}]}"
+        RandomHTML="$RandomHTML/$RandomVersion"
+        cd ..
+    fi
+
+    local random_meta_id=$(openssl rand -hex 16)
+    local random_comment=$(openssl rand -hex 8)
+    local random_class_suffix=$(openssl rand -hex 4)
+    local random_title_prefix="Page_"
+    local random_title_suffix=$(openssl rand -hex 4)
+    local random_footer_text="Designed by RandomSite_${random_title_suffix}"
+    local random_id_suffix=$(openssl rand -hex 4)
+
+    local meta_names=("viewport-id" "session-id" "track-id" "render-id" "page-id" "config-id")
+    local random_meta_name=${meta_names[$RANDOM % ${#meta_names[@]}]}
+
+    local class_prefixes=("style" "data" "ui" "layout" "theme" "view")
+    local random_class_prefix=${class_prefixes[$RANDOM % ${#class_prefixes[@]}]}
+    local random_class="$random_class_prefix-$random_class_suffix"
+    local random_title="${random_title_prefix}${random_title_suffix}"
+
+    find "./$RandomHTML" -type f -name "*.html" -exec sed -i \
+        -e "s|<!-- Website template by freewebsitetemplates.com -->||" \
+        -e "s|<!-- Theme by: WebThemez.com -->||" \
+        -e "s|<a href=\"http://freewebsitetemplates.com\">Free Website Templates</a>|<span>${random_footer_text}</span>|" \
+        -e "s|<a href=\"http://webthemez.com\" alt=\"webthemez\">WebThemez.com</a>|<span>${random_footer_text}</span>|" \
+        -e "s|id=\"Content\"|id=\"rnd_${random_id_suffix}\"|" \
+        -e "s|id=\"subscribe\"|id=\"sub_${random_id_suffix}\"|" \
+        -e "s|<title>.*</title>|<title>${random_title}</title>|" \
+        -e "s/<\/head>/<meta name=\"$random_meta_name\" content=\"$random_meta_id\">\n<!-- $random_comment -->\n<\/head>/" \
+        -e "s/<body/<body class=\"$random_class\"/" \
+        {} \;
+
+    find "./$RandomHTML" -type f -name "*.css" -exec sed -i \
+        -e "1i\/* $random_comment */" \
+        -e "1i.$random_class { display: block; }" \
+        {} \;
+
+    kill "$spinner_pid" 2>/dev/null
+    wait "$spinner_pid" 2>/dev/null
+    printf "\r\033[K" > /dev/tty
+
+    echo "${LANG[SELECT_TEMPLATE]}" "${RandomHTML}"
+
+    if [[ -d "${RandomHTML}" ]]; then
+        if [[ ! -d "/var/www/html/" ]]; then
+            mkdir -p "/var/www/html/" || { echo "Failed to create /var/www/html/"; exit 1; }
+        fi
+        rm -rf /var/www/html/*
+        cp -a "${RandomHTML}"/. "/var/www/html/"
+        echo "${LANG[TEMPLATE_COPY]}"
+    else
+        echo "${LANG[UNPACK_ERROR]}" && exit 1
+    fi
+
+    if ! find "/var/www/html" -type f -name "*.html" -exec grep -q "$random_meta_name" {} \; 2>/dev/null; then
+        echo -e "${COLOR_RED}${LANG[FAILED_TO_MODIFY_HTML_FILES]}${COLOR_RESET}"
+        return 1
+    fi
+
+    cd /opt/
+    rm -rf simple-web-templates-main/ sni-templates-main/
+}
+#Manage Template for steal
 
 install_packages() {
     echo -e "${COLOR_YELLOW}${LANG[INSTALL_PACKAGES]}${COLOR_RESET}"
@@ -933,23 +812,6 @@ EOL
                 --non-interactive \
                 --key-type ecdsa \
                 --elliptic-curve secp384r1
-            ;;
-        2)
-            # ACME HTTP-01 (without wildcard)
-            ufw allow 80/tcp comment 'HTTP for ACME challenge' > /dev/null 2>&1
-
-            certbot certonly \
-                --standalone \
-                -d "$DOMAIN" \
-                --email "$LETSENCRYPT_EMAIL" \
-                --agree-tos \
-                --non-interactive \
-                --http-01-port 80 \
-                --key-type ecdsa \
-                --elliptic-curve secp384r1
-
-            ufw delete allow 80/tcp > /dev/null 2>&1
-            ufw reload > /dev/null 2>&1
             ;;
         *)
             echo -e "${COLOR_RED}${LANG[INVALID_CERT_METHOD]}${COLOR_RESET}"
@@ -1529,25 +1391,7 @@ handle_certificates() {
     done
 
     if [ "$need_certificates" = true ]; then
-        echo -e ""
-        echo -e "${COLOR_YELLOW}${LANG[CERT_METHOD_PROMPT]}${COLOR_RESET}"
-        echo -e ""
-        echo -e "${COLOR_YELLOW}1. ${LANG[CERT_METHOD_CF]}${COLOR_RESET}"
-        echo -e "${COLOR_YELLOW}2. ${LANG[CERT_METHOD_ACME]}${COLOR_RESET}"
-        echo -e ""
-        echo -e "${COLOR_YELLOW}0. ${LANG[EXIT]}${COLOR_RESET}"
-        echo -e ""
-        reading "${LANG[CERT_METHOD_CHOOSE]}" cert_method
-
-        if [ "$cert_method" == "0" ]; then
-            echo -e "${COLOR_YELLOW}${LANG[EXIT]}${COLOR_RESET}"
-            exit 1
-        elif [ "$cert_method" == "2" ]; then
-            reading "${LANG[EMAIL_PROMPT]}" letsencrypt_email
-        elif [ "$cert_method" != "1" ]; then
-            echo -e "${COLOR_RED}${LANG[CERT_INVALID_CHOICE]}${COLOR_RESET}"
-            exit 1
-        fi
+        cert_method="1"
     else
         echo -e "${COLOR_GREEN}${LANG[CERTS_SKIPPED]}${COLOR_RESET}"
         cert_method="1"
@@ -1573,19 +1417,6 @@ handle_certificates() {
                 cert_domains_added["$domain"]="1"
             fi
         done
-    elif [ "$need_certificates" = true ] && [ "$cert_method" == "2" ]; then
-        for domain in "${!domains_to_check_ref[@]}"; do
-            get_certificates "$domain" "$cert_method" "$letsencrypt_email"
-            if [ $? -ne 0 ]; then
-                echo -e "${COLOR_RED}${LANG[CERT_GENERATION_FAILED]} $domain${COLOR_RESET}"
-                continue
-            fi
-            if [ -z "${cert_domains_added[$domain]}" ]; then
-                echo "      - /etc/letsencrypt/live/$domain/fullchain.pem:/etc/nginx/ssl/$domain/fullchain.pem:ro" >> "$target_dir/docker-compose.yml"
-                echo "      - /etc/letsencrypt/live/$domain/privkey.pem:/etc/nginx/ssl/$domain/privkey.pem:ro" >> "$target_dir/docker-compose.yml"
-                cert_domains_added["$domain"]="1"
-            fi
-        done
     else
         for domain in "${!domains_to_check_ref[@]}"; do
             local base_domain=$(extract_domain "$domain")
@@ -1601,12 +1432,7 @@ handle_certificates() {
         done
     fi
 
-    local cron_command
-    if [ "$cert_method" == "2" ]; then
-        cron_command="ufw allow 80 && /usr/bin/certbot renew --quiet && ufw delete allow 80 && ufw reload"
-    else
-        cron_command="/usr/bin/certbot renew --quiet"
-    fi
+    local cron_command="/usr/bin/certbot renew --quiet"
 
     if ! crontab -u root -l 2>/dev/null | grep -q "/usr/bin/certbot renew"; then
         echo -e "${COLOR_YELLOW}${LANG[ADDING_CRON_FOR_EXISTING_CERTS]}${COLOR_RESET}"
@@ -1616,11 +1442,6 @@ handle_certificates() {
         else
             add_cron_rule "0 5 1 */2 * $cron_command"
         fi
-    elif [ "$min_days_left" -le 30 ] && ! crontab -u root -l 2>/dev/null | grep -q "0 5 * * *.*$cron_command"; then
-        echo -e "${COLOR_YELLOW}${LANG[CERT_EXPIRY_SOON]} $min_days_left ${LANG[DAYS]}${COLOR_RESET}"
-        echo -e "${COLOR_YELLOW}${LANG[UPDATING_CRON]}${COLOR_RESET}"
-        crontab -u root -l 2>/dev/null | grep -v "/usr/bin/certbot renew" | crontab -u root -
-        add_cron_rule "0 5 * * * $cron_command"
     else
         echo -e "${COLOR_YELLOW}${LANG[CRON_ALREADY_EXISTS]}${COLOR_RESET}"
     fi
