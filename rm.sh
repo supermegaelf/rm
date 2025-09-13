@@ -22,7 +22,6 @@ readonly WARNING="!"
 readonly INFO="*"
 readonly ARROW="→"
 
-SCRIPT_VERSION="2.1.7"
 DIR_REMNAWAVE="/usr/local/remnawave_reverse/"
 
 #======================
@@ -51,17 +50,20 @@ validate_ip() {
 # SYSTEM CHECK FUNCTIONS
 #========================
 
+# Display error and exit
 error() {
     echo -e "${RED}${CROSS}${NC} $1"
     exit 1
 }
 
+# Check supported OS
 check_os() {
     if ! grep -q "bullseye" /etc/os-release && ! grep -q "bookworm" /etc/os-release && ! grep -q "jammy" /etc/os-release && ! grep -q "noble" /etc/os-release && ! grep -q "trixie" /etc/os-release; then
         error "Supported only Debian 11/12 and Ubuntu 22.04/24.04"
     fi
 }
 
+# Check root privileges
 check_root() {
     if [[ $EUID -ne 0 ]]; then
         error "Script must be run as root"
@@ -92,11 +94,13 @@ show_main_menu() {
 # UTILITY FUNCTIONS
 #===================
 
+# Generate random username
 generate_user() {
     local length=8
     tr -dc 'a-zA-Z' < /dev/urandom | fold -w $length | head -n 1
 }
 
+# Generate secure password
 generate_password() {
     local length=24
     local password=""
@@ -117,16 +121,19 @@ generate_password() {
     echo "$password"
 }
 
+# Remove color codes from log
 log_clear() {
     sed -i -e 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$LOGFILE"
 }
 
+# Initialize logging
 log_entry() {
     mkdir -p ${DIR_REMNAWAVE}
     LOGFILE="${DIR_REMNAWAVE}remnawave_reverse.log"
     exec > >(tee -a "$LOGFILE") 2>&1
 }
 
+# Add cron job with logging
 add_cron_rule() {
     local rule="$1"
     local logged_rule="${rule} >> ${DIR_REMNAWAVE}cron_jobs.log 2>&1"
@@ -140,14 +147,15 @@ add_cron_rule() {
     fi
 }
 
+# Extract base domain
 extract_domain() {
     local SUBDOMAIN=$1
     echo "$SUBDOMAIN" | awk -F'.' '{if (NF > 2) {print $(NF-1)"."$NF} else {print $0}}'
 }
 
-#==============================
+#=======================
 # PANEL INPUT FUNCTIONS
-#==============================
+#=======================
 
 # Input panel domain
 input_panel_domain() {
@@ -260,9 +268,9 @@ input_ssl_certificate() {
     fi
 }
 
-#==================================
+#====================================
 # CONFIGURATION GENERATION FUNCTIONS
-#==================================
+#====================================
 
 # Generate configuration variables
 generate_configuration() {
@@ -345,10 +353,11 @@ move_variables_file() {
     echo -e "${GREEN}${CHECK}${NC} Configuration files moved"
 }
 
-#=====================================
+#===============================
 # SYSTEM INSTALLATION FUNCTIONS
-#=====================================
+#===============================
 
+# Install required system packages
 install_system_packages() {
     echo -e "${CYAN}${INFO}${NC} Installing basic packages..."
     echo -e "${GRAY}  ${ARROW}${NC} Updating package lists"
@@ -492,10 +501,11 @@ install_system_packages() {
     echo -e "${GREEN}${CHECK}${NC} System packages configured"
 }
 
-#=======================
+#========================
 # DOMAIN CHECK FUNCTIONS
-#=======================
+#========================
 
+# Check domain DNS configuration
 check_domain() {
     local domain="$1"
     local show_warning="${2:-true}"
@@ -593,6 +603,7 @@ check_domain() {
     return 0
 }
 
+# Check if certificate is wildcard
 is_wildcard_cert() {
     local domain=$1
     local cert_path="/etc/letsencrypt/live/$domain/fullchain.pem"
@@ -608,6 +619,7 @@ is_wildcard_cert() {
     fi
 }
 
+# Check certificate existence
 check_certificates() {
     local DOMAIN=$1
     local cert_dir="/etc/letsencrypt/live"
@@ -651,6 +663,7 @@ check_certificates() {
     return 1
 }
 
+# Validate Cloudflare API credentials
 check_api() {
     local attempts=3
     local attempt=1
@@ -680,6 +693,7 @@ check_api() {
     exit 1
 }
 
+# Generate SSL certificates
 get_certificates() {
     local DOMAIN=$1
     local CERT_METHOD=$2
@@ -736,6 +750,7 @@ EOL
     fi
 }
 
+# Check certificate expiry date
 check_cert_expiry() {
     local domain="$1"
     local cert_dir="/etc/letsencrypt/live"
@@ -763,6 +778,7 @@ check_cert_expiry() {
     return 0
 }
 
+# Fix Let's Encrypt structure
 fix_letsencrypt_structure() {
     local domain=$1
     local live_dir="/etc/letsencrypt/live/$domain"
@@ -834,6 +850,7 @@ fix_letsencrypt_structure() {
     return 0
 }
 
+# Handle certificate management
 handle_certificates() {
     local -n domains_to_check_ref=$1
     local cert_method="$2"
@@ -937,6 +954,7 @@ handle_certificates() {
 # API REQUEST FUNCTIONS
 #=======================
 
+# Make HTTP API request
 make_api_request() {
     local method=$1
     local url=$2
@@ -958,6 +976,7 @@ make_api_request() {
     fi
 }
 
+# Register admin user
 register_remnawave() {
     local domain_url=$1
     local username=$2
@@ -976,6 +995,7 @@ register_remnawave() {
     fi
 }
 
+# Get or create API token
 get_panel_token() {
     TOKEN_FILE="${DIR_REMNAWAVE}/token"
     ENV_FILE="/opt/remnawave/.env"
@@ -1052,6 +1072,7 @@ get_panel_token() {
     fi
 }
 
+# Get public key from panel
 get_public_key() {
     local domain_url=$1
     local token=$2
@@ -1080,6 +1101,7 @@ EOL
     echo "$pubkey"
 }
 
+# Generate X25519 keys
 generate_xray_keys() {
     local domain_url=$1
     local token=$2
@@ -1105,6 +1127,7 @@ generate_xray_keys() {
     echo "$private_key"
 }
 
+# Create node in panel
 create_node() {
     local domain_url=$1
     local token=$2
@@ -1145,6 +1168,7 @@ EOF
     fi
 }
 
+# Get config profiles
 get_config_profiles() {
     local domain_url="$1"
     local token="$2"
@@ -1165,6 +1189,7 @@ get_config_profiles() {
     return 0
 }
 
+# Delete config profile
 delete_config_profile() {
     local domain_url="$1"
     local token="$2"
@@ -1186,6 +1211,7 @@ delete_config_profile() {
     return 0
 }
 
+# Create config profile
 create_config_profile() {
     local domain_url=$1
     local token=$2
@@ -1251,6 +1277,7 @@ create_config_profile() {
     echo "$config_uuid $inbound_uuid"
 }
 
+# Create host configuration
 create_host() {
     local domain_url=$1
     local token=$2
@@ -1289,6 +1316,7 @@ create_host() {
     fi
 }
 
+# Get default squad
 get_default_squad() {
     local domain_url=$1
     local token=$2
@@ -1326,6 +1354,7 @@ get_default_squad() {
     return 0
 }
 
+# Update squad configuration
 update_squad() {
     local domain_url=$1
     local token=$2
@@ -1375,6 +1404,7 @@ update_squad() {
 # TEMPLATE MANAGEMENT FUNCTIONS
 #===============================
 
+# Install random HTML template
 randomhtml() {
     local template_source="$1"
 
@@ -1488,6 +1518,7 @@ randomhtml() {
 # PANEL INSTALLATION FUNCTIONS
 #==============================
 
+# Create panel Docker configuration
 install_remnawave_panel() {
     source /opt/remnawave/remnawave-vars.sh
     
@@ -1640,6 +1671,7 @@ services:
 EOL
 }
 
+# Complete panel installation
 installation_panel() {
     sleep 1
 
@@ -1878,6 +1910,7 @@ EOL
 # NODE INSTALLATION FUNCTIONS
 #=============================
 
+# Create node Docker configuration
 install_remnawave_node() {
     mkdir -p /opt/remnawave && cd /opt/remnawave
 
@@ -1911,6 +1944,7 @@ services:
 EOL
 }
 
+# Complete node installation
 installation_node() {
     sleep 1
 
@@ -2158,10 +2192,8 @@ main() {
     show_main_menu
     read INSTALL_TYPE
     
-    # Collect input variables FIRST based on choice
     case $INSTALL_TYPE in
         1)
-            # Panel installation - collect panel variables
             echo
             echo -e "${PURPLE}===================${NC}"
             echo -e "${WHITE}Panel Installation${NC}"
@@ -2182,7 +2214,6 @@ main() {
             save_variables_to_file
             ;;
         2)
-            # Node installation - collect node variables
             echo
             echo -e "${PURPLE}==================${NC}"
             echo -e "${WHITE}Node Installation${NC}"
@@ -2210,7 +2241,6 @@ main() {
             ;;
     esac
 
-    # Now execute the installation based on choice
     case $INSTALL_TYPE in
         1)
             install_panel
@@ -2221,6 +2251,5 @@ main() {
     esac
 }
 
-# Execute main function
 main
 exit 0
