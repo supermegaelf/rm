@@ -2099,12 +2099,6 @@ install_panel() {
     echo -e "${CYAN}Configuration File:${NC}"
     echo -e "${WHITE}Variables saved to: $APP_DIR/remnawave-vars.sh${NC}"
     echo
-    echo -e "${CYAN}Next Steps:${NC}"
-    echo -e "${WHITE}1. Go to \"Node settings\" in the Remnawave panel.${NC}"
-    echo -e "${WHITE}2. Fill in the \"Name\" and \"Address\" fields.${NC}"
-    echo -e "${WHITE}3. Click \"Update Node\".${NC}"
-    echo -e "${WHITE}4. Run this script on node server and select \"Install Node\".${NC}"
-    echo
 }
 
 # Main node installation function
@@ -2148,11 +2142,6 @@ install_node() {
     echo -e "${CYAN}Useful Commands:${NC}"
     echo -e "${WHITE}• Check logs: cd /opt/remnawave && docker compose logs -f${NC}"
     echo -e "${WHITE}• Restart service: cd /opt/remnawave && docker compose restart${NC}"
-    echo
-    echo -e "${CYAN}Next Steps:${NC}"
-    echo -e "${WHITE}1. Go to \"Node settings\" in the Remnawave panel.${NC}"
-    echo -e "${WHITE}2. Fill in the \"Name\" and \"Address\" fields.${NC}"
-    echo -e "${WHITE}3. Click \"Update Node\".${NC}"
     echo
 }
 
