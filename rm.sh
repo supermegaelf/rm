@@ -47,9 +47,9 @@ validate_ip() {
     return 1
 }
 
-#=======================
+#========================
 # SYSTEM CHECK FUNCTIONS
-#=======================
+#========================
 
 error() {
     echo -e "${RED}${CROSS}${NC} $1"
@@ -75,9 +75,9 @@ check_root() {
 # Display main menu
 show_main_menu() {
     echo
-    echo -e "${PURPLE}================${NC}"
+    echo -e "${PURPLE}==================${NC}"
     echo -e "${WHITE}REMNAWAVE MANAGER${NC}"
-    echo -e "${PURPLE}================${NC}"
+    echo -e "${PURPLE}==================${NC}"
     echo
     echo -e "${CYAN}Please select installation type:${NC}"
     echo
@@ -88,9 +88,9 @@ show_main_menu() {
     echo -ne "${CYAN}Enter your choice (1, 2, or 3): ${NC}"
 }
 
-#====================
+#===================
 # UTILITY FUNCTIONS
-#====================
+#===================
 
 generate_user() {
     local length=8
@@ -140,32 +140,6 @@ add_cron_rule() {
     fi
 }
 
-spinner() {
-    local pid=$1
-    local text=$2
-
-    export LC_ALL=en_US.UTF-8
-    export LANG=en_US.UTF-8
-
-    local spinstr='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
-    local text_code="$GREEN"
-    local bg_code=""
-    local effect_code="\033[1m"
-    local delay=0.1
-    local reset_code="$NC"
-
-    printf "${effect_code}${text_code}${bg_code}%s${reset_code}" "$text" > /dev/tty
-
-    while kill -0 "$pid" 2>/dev/null; do
-        for (( i=0; i<${#spinstr}; i++ )); do
-            printf "\r${effect_code}${text_code}${bg_code}[%s] %s${reset_code}" "$(echo -n "${spinstr:$i:1}")" "$text" > /dev/tty
-            sleep $delay
-        done
-    done
-
-    printf "\r\033[K" > /dev/tty
-}
-
 extract_domain() {
     local SUBDOMAIN=$1
     echo "$SUBDOMAIN" | awk -F'.' '{if (NF > 2) {print $(NF-1)"."$NF} else {print $0}}'
@@ -177,7 +151,7 @@ extract_domain() {
 
 # Input panel domain
 input_panel_domain() {
-    echo -ne "${CYAN}Panel domain (e.g. panel.example.com): ${NC}"
+    echo -ne "${CYAN}Panel domain (e.g., example.com): ${NC}"
     read PANEL_DOMAIN
     while [[ -z "$PANEL_DOMAIN" ]] || ! validate_domain "$PANEL_DOMAIN"; do
         echo -e "${RED}${CROSS}${NC} Invalid domain! Please enter a valid domain."
@@ -189,7 +163,7 @@ input_panel_domain() {
 
 # Input subscription domain
 input_sub_domain() {
-    echo -ne "${CYAN}Subscription domain (e.g. sub.example.com): ${NC}"
+    echo -ne "${CYAN}Sub domain (e.g., example.com): ${NC}"
     read SUB_DOMAIN
     while [[ -z "$SUB_DOMAIN" ]] || ! validate_domain "$SUB_DOMAIN"; do
         echo -e "${RED}${CROSS}${NC} Invalid domain! Please enter a valid domain."
@@ -201,7 +175,7 @@ input_sub_domain() {
 
 # Input selfsteal domain
 input_selfsteal_domain() {
-    echo -ne "${CYAN}Selfsteal domain (e.g. node.example.com): ${NC}"
+    echo -ne "${CYAN}Self-steal domain (e.g., example.com): ${NC}"
     read SELFSTEAL_DOMAIN
     while [[ -z "$SELFSTEAL_DOMAIN" ]] || ! validate_domain "$SELFSTEAL_DOMAIN"; do
         echo -e "${RED}${CROSS}${NC} Invalid domain! Please enter a valid domain."
@@ -241,7 +215,7 @@ input_cloudflare_email() {
 
 # Input node selfsteal domain
 input_node_selfsteal_domain() {
-    echo -ne "${CYAN}Selfsteal domain for node (e.g. node.example.com): ${NC}"
+    echo -ne "${CYAN}Selfsteal domain (e.g., example.com): ${NC}"
     read NODE_SELFSTEAL_DOMAIN
     while [[ -z "$NODE_SELFSTEAL_DOMAIN" ]] || ! validate_domain "$NODE_SELFSTEAL_DOMAIN"; do
         echo -e "${RED}${CROSS}${NC} Invalid domain! Please enter a valid domain."
@@ -265,8 +239,7 @@ input_panel_ip() {
 
 # Input SSL certificate for node
 input_ssl_certificate() {
-    echo -e "${CYAN}Enter the SSL certificate obtained from the panel:"
-    echo -e "${GRAY}Keep the SSL_CERT= line and paste the content, then press Enter twice${NC}"
+    echo -e "${CYAN}Enter the node's SSL certificate from the panel and press \"Enter\" twice:${NC}"
     CERTIFICATE=""
     while IFS= read -r line; do
         if [ -z "$line" ]; then
@@ -280,7 +253,6 @@ input_ssl_certificate() {
 
     echo -ne "${CYAN}Are you sure the certificate is correct? (y/n): ${NC}"
     read confirm
-    echo
 
     if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
         echo -e "${RED}${CROSS}${NC} Installation aborted by user"
@@ -310,7 +282,7 @@ generate_configuration() {
     JWT_AUTH_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 64)
     JWT_API_TOKENS_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 64)
     
-    echo -e "${GREEN}${CHECK}${NC} All configuration variables generated!"
+    echo -e "${GREEN}${CHECK}${NC} All configuration variables generated"
 }
 
 # Save variables to file
@@ -340,7 +312,7 @@ EOF
     
     echo -e "${GRAY}  ${ARROW}${NC} Loading environment variables"
     source remnawave-vars.sh
-    echo -e "${GREEN}${CHECK}${NC} Variables saved to remnawave-vars.sh!"
+    echo -e "${GREEN}${CHECK}${NC} Variables saved to remnawave-vars.sh"
 }
 
 # Save node variables to file
@@ -356,7 +328,7 @@ EOF
     
     echo -e "${GRAY}  ${ARROW}${NC} Loading environment variables"
     source remnawave-node-vars.sh
-    echo -e "${GREEN}${CHECK}${NC} Variables saved to remnawave-node-vars.sh!"
+    echo -e "${GREEN}${CHECK}${NC} Variables saved to remnawave-node-vars.sh"
 }
 
 # Move variables file
@@ -370,7 +342,7 @@ move_variables_file() {
     if [ -f /root/remnawave-node-vars.sh ]; then
         mv /root/remnawave-node-vars.sh "$APP_DIR/"
     fi
-    echo -e "${GREEN}${CHECK}${NC} Configuration files moved!"
+    echo -e "${GREEN}${CHECK}${NC} Configuration files moved"
 }
 
 #=====================================
@@ -517,7 +489,7 @@ install_system_packages() {
     fi
 
     touch ${DIR_REMNAWAVE}install_packages
-    echo -e "${GREEN}${CHECK}${NC} All packages installed successfully"
+    echo -e "${GREEN}${CHECK}${NC} System packages configured"
 }
 
 #=======================
@@ -605,8 +577,10 @@ check_domain() {
             echo -e "${YELLOW}WARNING:${NC}"
             printf "${RED}The domain %s points to IP address %s, which differs from this server's IP (%s).${NC}\n" "$domain" "$domain_ip" "$server_ip"
             echo -e "${YELLOW}For proper operation, the domain must point to the current server.${NC}"
+            echo
             echo -ne "${CYAN}Enter 'y' to continue or 'n' to exit (y/n): ${NC}"
             read confirm
+            echo
             if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
                 return 1
             else
@@ -660,7 +634,7 @@ check_certificates() {
                 fi
             fi
         done
-        echo -e "${GREEN}Certificates found in /etc/letsencrypt/live/$(basename "$live_dir")${NC}"
+        echo -e "${GRAY}  ${ARROW}${NC} Certificates for $(basename "$live_dir")"
         return 0
     fi
 
@@ -870,13 +844,8 @@ handle_certificates() {
     local need_certificates=false
     local min_days_left=9999
 
-    echo -e "${YELLOW}Checking certificates...${NC}"
+    echo -e "${CYAN}${INFO}${NC} Checking certificates..."
     sleep 1
-
-    echo -e "${YELLOW}Required domains for certificates:${NC}"
-    for domain in "${!domains_to_check_ref[@]}"; do
-        echo -e "${WHITE}- $domain${NC}"
-    done
 
     for domain in "${!domains_to_check_ref[@]}"; do
         if ! check_certificates "$domain"; then
@@ -892,7 +861,8 @@ handle_certificates() {
     if [ "$need_certificates" = true ]; then
         cert_method="1"
     else
-        echo -e "${GREEN}All certificates already exist. Skipping generation.${NC}"
+        echo -e "${GREEN}${CHECK}${NC} All certificates already exist"
+        echo
         cert_method="1"
     fi
 
@@ -933,16 +903,21 @@ handle_certificates() {
 
     local cron_command="/usr/bin/certbot renew --quiet"
 
+    echo -e "${CYAN}${INFO}${NC} Configuring certificate renewal..."
     if ! crontab -u root -l 2>/dev/null | grep -q "/usr/bin/certbot renew"; then
-        echo -e "${YELLOW}Adding cron job for certificate renewal...${NC}"
+        echo -e "${GRAY}  ${ARROW}${NC} Adding cron job for certificate renewal"
         if [ "$min_days_left" -le 30 ]; then
-            echo -e "${YELLOW}Certificates will expire soon in $min_days_left days${NC}"
+            echo -e "${GRAY}  ${ARROW}${NC} Certificates will expire soon in $min_days_left days"
             add_cron_rule "0 5 * * * $cron_command"
         else
             add_cron_rule "0 5 1 */2 * $cron_command"
         fi
+        echo -e "${GREEN}${CHECK}${NC} Certificate renewal configured"
+        echo
     else
-        echo -e "${YELLOW}Cron job for certificate renewal already exists.${NC}"
+        echo -e "${GRAY}  ${ARROW}${NC} Cron job for certificate renewal already exists"
+        echo -e "${GREEN}${CHECK}${NC} Certificate renewal configured"
+        echo
     fi
 
     for domain in "${!unique_domains[@]}"; do
@@ -1164,10 +1139,9 @@ EOF
         echo -e "${RED}Empty response from server when creating node.${NC}"
     fi
 
-    if echo "$node_response" | jq -e '.response.uuid' > /dev/null; then
-        printf "${GREEN}Node successfully created${NC}\n"
-    else
+    if ! echo "$node_response" | jq -e '.response.uuid' > /dev/null; then
         echo -e "${RED}Failed to create node.${NC}"
+        return 1
     fi
 }
 
@@ -1309,10 +1283,9 @@ create_host() {
         echo -e "${RED}Empty response from server when creating host.${NC}"
     fi
 
-    if echo "$response" | jq -e '.response.uuid' > /dev/null; then
-        echo -e "${GREEN}Host successfully created${NC}"
-    else
+    if ! echo "$response" | jq -e '.response.uuid' > /dev/null; then
         echo -e "${RED}Failed to create host.${NC}"
+        return 1
     fi
 }
 
@@ -1410,10 +1383,8 @@ randomhtml() {
     rm -f main.zip 2>/dev/null
     rm -rf simple-web-templates-main/ sni-templates-main/ 2>/dev/null
 
-    echo -e "${YELLOW}Installing random template for camouflage site${NC}"
-    sleep 1
-    spinner $$ "Please wait..." &
-    spinner_pid=$!
+    echo -e "${GRAY}  ${ARROW}${NC} Installing random template for camouflage site"
+    echo -e "${GRAY}  ${ARROW}${NC} Downloading and extracting template"
 
     template_urls=(
         "https://github.com/eGamesAPI/simple-web-templates/archive/refs/heads/main.zip"
@@ -1491,11 +1462,7 @@ randomhtml() {
         -e "1i.$random_class { display: block; }" \
         {} \;
 
-    kill "$spinner_pid" 2>/dev/null
-    wait "$spinner_pid" 2>/dev/null
-    printf "\r\033[K" > /dev/tty
-
-    echo "Selected template:" "${RandomHTML}"
+    echo -e "${GRAY}  ${ARROW}${NC} Selected template: $RandomHTML"
 
     if [[ -d "${RandomHTML}" ]]; then
         if [[ ! -d "/var/www/html/" ]]; then
@@ -1503,7 +1470,7 @@ randomhtml() {
         fi
         rm -rf /var/www/html/*
         cp -a "${RandomHTML}"/. "/var/www/html/"
-        echo "Template copied to /var/www/html/"
+        echo -e "${GRAY}  ${ARROW}${NC} Template copied to /var/www/html/"
     else
         echo "Error unpacking archive" && exit 1
     fi
@@ -1551,7 +1518,6 @@ install_remnawave_panel() {
     unique_domains["$PANEL_BASE_DOMAIN"]=1
     unique_domains["$SUB_BASE_DOMAIN"]=1
 
-    # Создание .env файла (переменные уже сгенерированы в main())
     cat > .env <<EOL
 ### APP ###
 APP_PORT=3000
@@ -1675,7 +1641,6 @@ EOL
 }
 
 installation_panel() {
-    echo -e "${YELLOW}Installing panel${NC}"
     sleep 1
 
     declare -A unique_domains
@@ -1756,7 +1721,6 @@ volumes:
     name: remnawave-redis-data
 EOL
 
-    echo -e "${CYAN}${INFO}${NC} Creating Nginx configuration..."
     echo -e "${GRAY}  ${ARROW}${NC} Configuring SSL and proxy settings"
     cat > /opt/remnawave/nginx.conf <<EOL
 upstream remnawave {
@@ -1867,14 +1831,13 @@ server {
 }
 EOL
 
-    echo -e "${CYAN}${INFO}${NC} Starting Docker containers..."
-    echo -e "${GRAY}  ${ARROW}${NC} Launching services"
+    echo -e "${GRAY}  ${ARROW}${NC} Starting Docker containers"
     cd /opt/remnawave
-    docker compose up -d > /dev/null 2>&1 &
-
-    spinner $! "Please wait..."
-
-    echo -e "${CYAN}${INFO}${NC} Registering Remnawave..."
+    docker compose up -d > /dev/null 2>&1
+    echo -e "${GREEN}${CHECK}${NC} Docker containers started successfully"
+    echo
+    echo -e "${CYAN}${INFO}${NC} Setting up Remnawave panel..."
+    echo -e "${GRAY}  ${ARROW}${NC} Waiting for containers to start"
     sleep 20
 
     local domain_url="127.0.0.1:3000"
@@ -1887,59 +1850,28 @@ EOL
         sleep 5
     done
 
-    # Register Remnawave
-    echo -e "${GRAY}  ${ARROW}${NC} Creating admin user"
+    echo -e "${GRAY}  ${ARROW}${NC} Registering admin user"
     local token=$(register_remnawave "$domain_url" "$SUPERADMIN_USERNAME" "$SUPERADMIN_PASSWORD")
-    echo -e "${GREEN}${CHECK}${NC} Registration completed successfully!"
 
-    # Generate Xray keys
-    echo -e "${CYAN}${INFO}${NC} Generating x25519 keys..."
-    sleep 1
+    echo -e "${GRAY}  ${ARROW}${NC} Generating x25519 keys"
     local private_key=$(generate_xray_keys "$domain_url" "$token")
-    echo -e "${GREEN}${CHECK}${NC} Keys successfully generated"
 
     # Delete default config profile
     delete_config_profile "$domain_url" "$token"
 
-    # Create config profile
-    echo -e "${CYAN}${INFO}${NC} Creating config profile..."
+    echo -e "${GRAY}  ${ARROW}${NC} Creating config profile"
     read config_profile_uuid inbound_uuid <<< $(create_config_profile "$domain_url" "$token" "StealConfig" "$SELFSTEAL_DOMAIN" "$private_key")
-    echo -e "${GREEN}${CHECK}${NC} Config profile successfully created"
 
-    # Create node with config profile binding
-    echo -e "${CYAN}${INFO}${NC} Creating node..."
+    echo -e "${GRAY}  ${ARROW}${NC} Creating node configuration"
     create_node "$domain_url" "$token" "$config_profile_uuid" "$inbound_uuid" "$SELFSTEAL_DOMAIN"
 
-    # Create host
-    echo -e "${CYAN}${INFO}${NC} Creating host..."
+    echo -e "${GRAY}  ${ARROW}${NC} Setting up host configuration"
     create_host "$domain_url" "$token" "$inbound_uuid" "$SELFSTEAL_DOMAIN" "$config_profile_uuid"
 
-    # Get UUID default squad
-    echo -e "${CYAN}${INFO}${NC} Getting default squad..."
+    echo -e "${GRAY}  ${ARROW}${NC} Configuring default squad"
     local squad_uuid=$(get_default_squad "$domain_url" "$token")
-
-    # Update squad
     update_squad "$domain_url" "$token" "$squad_uuid" "$inbound_uuid"
-    echo -e "${GREEN}${CHECK}${NC} Squad successfully updated"
-
-    # Display completion info
-    echo
-    echo -e "${PURPLE}=================================================${NC}"
-    echo -e "${GREEN}               INSTALLATION COMPLETE!${NC}"
-    echo -e "${PURPLE}=================================================${NC}"
-    echo -e "${CYAN}Panel URL:${NC}"
-    echo -e "${WHITE}https://${PANEL_DOMAIN}/auth/login?${cookies_random1}=${cookies_random2}${NC}"
-    echo -e "${CYAN}-------------------------------------------------${NC}"
-    echo -e "${CYAN}To log into the panel, use the following data:${NC}"
-    echo -e "${CYAN}Username:${NC} ${WHITE}$SUPERADMIN_USERNAME${NC}"
-    echo -e "${CYAN}Password:${NC} ${WHITE}$SUPERADMIN_PASSWORD${NC}"
-    echo -e "${CYAN}-------------------------------------------------${NC}"
-    echo -e "${CYAN}To relaunch the manager, use the following command:${NC}"
-    echo -e "${GREEN}remnawave_reverse${NC}"
-    echo -e "${PURPLE}=================================================${NC}"
-    echo -e "${RED}To install the node, follow these steps:${NC}"
-    echo -e "${RED}1. Run this script on the server where the node will be installed.${NC}"
-    echo -e "${RED}2. Select 'Install Remnawave Components', then 'Install only the node'.${NC}"
+    echo -e "${GREEN}${CHECK}${NC} Remnawave panel configured successfully"
 }
 
 #=============================
@@ -1980,7 +1912,6 @@ EOL
 }
 
 installation_node() {
-    echo -e "${YELLOW}Installing node${NC}"
     sleep 1
 
     declare -A unique_domains
@@ -2007,7 +1938,7 @@ installation_node() {
         NODE_CERT_DOMAIN="$SELFSTEAL_DOMAIN"
     fi
 
-    echo -e "${CYAN}${INFO}${NC} Completing Docker Compose configuration..."
+    echo -e "${CYAN}${INFO}${NC} Configuring Docker Compose..."
     echo -e "${GRAY}  ${ARROW}${NC} Adding node services"
     cat >> /opt/remnawave/docker-compose.yml <<EOL
       - /dev/shm:/dev/shm:rw
@@ -2040,7 +1971,6 @@ installation_node() {
         max-file: '5'
 EOL
 
-    echo -e "${CYAN}${INFO}${NC} Creating Nginx configuration for node..."
     echo -e "${GRAY}  ${ARROW}${NC} Configuring SSL and Unix socket"
     cat > /opt/remnawave/nginx.conf <<EOL
 map \$http_upgrade \$connection_upgrade {
@@ -2077,37 +2007,37 @@ server {
 }
 EOL
 
-    echo -e "${CYAN}${INFO}${NC} Configuring firewall rules..."
-    echo -e "${GRAY}  ${ARROW}${NC} Allowing panel IP access to node port"
+    echo -e "${GRAY}  ${ARROW}${NC} Allowing panel IP to node port"
     ufw allow from $PANEL_IP to any port 2222 > /dev/null 2>&1
     ufw reload > /dev/null 2>&1
 
-    echo -e "${CYAN}${INFO}${NC} Starting Docker containers..."
     echo -e "${GRAY}  ${ARROW}${NC} Launching node services"
     sleep 3
     cd /opt/remnawave
-    docker compose up -d > /dev/null 2>&1 &
-
-    spinner $! "Please wait..."
-
+    docker compose up -d > /dev/null 2>&1
+    echo -e "${GREEN}${CHECK}${NC} Docker containers started successfully"
+    echo
     echo -e "${CYAN}${INFO}${NC} Installing camouflage template..."
+    echo -e "${GRAY}  ${ARROW}${NC} Selecting random template"
     randomhtml
-
-    echo -e "${CYAN}${INFO}${NC} Checking node connection for $SELFSTEAL_DOMAIN..."
+    echo -e "${GREEN}${CHECK}${NC} Camouflage template installed successfully"
+    echo
+    echo -e "${CYAN}${INFO}${NC} Checking node connection..."
     local max_attempts=5
     local attempt=1
     local delay=15
 
     while [ $attempt -le $max_attempts ]; do
-        echo -e "${GRAY}  ${ARROW}${NC} Attempt $attempt of $max_attempts..."
+        echo -e "${GRAY}  ${ARROW}${NC} Attempt $attempt of $max_attempts"
         if curl -s --fail --max-time 10 "https://$SELFSTEAL_DOMAIN" | grep -q "html"; then
-            echo -e "${GREEN}${CHECK}${NC} Node successfully launched!"
+            echo -e "${GREEN}${CHECK}${NC} Node connection established successfully"
             break
         else
-            echo -e "${GRAY}  ${ARROW}${NC} Node is unavailable on attempt $attempt."
+            echo -e "${GRAY}  ${ARROW}${NC} Node unavailable on attempt $attempt"
             if [ $attempt -eq $max_attempts ]; then
-                echo -e "${RED}${CROSS}${NC} Node not connected after $max_attempts attempts!"
-                echo -e "${YELLOW}${WARNING}${NC} Check the configuration or restart the panel."
+                echo -e "${RED}${CROSS}${NC} Node connection failed"
+                echo -e "${YELLOW}${WARNING}${NC} Check configuration or restart panel"
+                echo
                 exit 1
             fi
             sleep $delay
@@ -2132,24 +2062,49 @@ install_panel() {
     COMPOSE_FILE="$APP_DIR/docker-compose.yml"
     ENV_FILE="$APP_DIR/.env"
 
-    # System installation
     echo
     echo -e "${GREEN}Installing packages${NC}"
     echo -e "${GREEN}===================${NC}"
     echo
+
     install_system_packages
-    echo -e "${GREEN}${CHECK}${NC} System packages configured!"
-    echo
 
     echo
     echo -e "${GREEN}Creating structure and certificates${NC}"
     echo -e "${GREEN}===================================${NC}"
     echo
+
     move_variables_file
+
+    echo
+    echo -e "${GREEN}Installing panel${NC}"
+    echo -e "${GREEN}================${NC}"
     echo
 
-    # Panel installation
     installation_panel
+
+    # Display completion info
+    echo
+    echo -e "${PURPLE}========================${NC}"
+    echo -e "${GREEN}${CHECK}${NC} Installation complete"
+    echo -e "${PURPLE}========================${NC}"
+    echo
+    echo -e "${CYAN}Panel URL:${NC}"
+    echo -e "${WHITE}https://${PANEL_DOMAIN}/auth/login?${cookies_random1}=${cookies_random2}${NC}"
+    echo
+    echo -e "${CYAN}Admin Credentials (${YELLOW}SAVE THESE${CYAN}):${NC}"
+    echo -e "${WHITE}Username: $SUPERADMIN_USERNAME${NC}"
+    echo -e "${WHITE}Password: $SUPERADMIN_PASSWORD${NC}"
+    echo
+    echo -e "${CYAN}Configuration File:${NC}"
+    echo -e "${WHITE}Variables saved to: $APP_DIR/remnawave-vars.sh${NC}"
+    echo
+    echo -e "${CYAN}Next Steps:${NC}"
+    echo -e "${WHITE}1. Go to \"Node settings\" in the Remnawave panel.${NC}"
+    echo -e "${WHITE}2. Fill in the \"Name\" and \"Address\" fields.${NC}"
+    echo -e "${WHITE}3. Click \"Update Node\".${NC}"
+    echo -e "${WHITE}4. Run this script on node server and select \"Install Node\".${NC}"
+    echo
 }
 
 # Main node installation function
@@ -2163,30 +2118,32 @@ install_node() {
     DATA_DIR="/var/lib/$APP_NAME"
     COMPOSE_FILE="$APP_DIR/docker-compose.yml"
 
-    # System installation
     echo
     echo -e "${GREEN}Installing packages${NC}"
     echo -e "${GREEN}===================${NC}"
     echo
+
     install_system_packages
-    echo -e "${GREEN}${CHECK}${NC} System packages configured!"
-    echo
 
     echo
     echo -e "${GREEN}Creating structure and certificates${NC}"
     echo -e "${GREEN}===================================${NC}"
     echo
+
     move_variables_file
+
+    echo
+    echo -e "${GREEN}Installing node${NC}"
+    echo -e "${GREEN}===============${NC}"
     echo
 
-    # Node installation
     installation_node
 
     # Display completion info
     echo
-    echo -e "${PURPLE}=========================${NC}"
-    echo -e "${GREEN}${CHECK}${NC} Installation complete!"
-    echo -e "${PURPLE}=========================${NC}"
+    echo -e "${PURPLE}========================${NC}"
+    echo -e "${GREEN}${CHECK}${NC} Installation complete"
+    echo -e "${PURPLE}========================${NC}"
     echo
     echo -e "${CYAN}Useful Commands:${NC}"
     echo -e "${WHITE}• Check logs: cd /opt/remnawave && docker compose logs -f${NC}"
