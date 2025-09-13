@@ -2133,6 +2133,10 @@ install_panel() {
     echo -e "${CYAN}Configuration File:${NC}"
     echo -e "${WHITE}Variables saved to: $APP_DIR/remnawave-vars.sh${NC}"
     echo
+    echo -e "${CYAN}Useful Commands:${NC}"
+    echo -e "${WHITE}• Check logs: cd /opt/remnawave && docker compose logs -f${NC}"
+    echo -e "${WHITE}• Restart service: cd /opt/remnawave && docker compose restart${NC}"
+    echo
 }
 
 # Main node installation function
