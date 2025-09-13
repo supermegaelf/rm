@@ -1,217 +1,96 @@
 #!/bin/bash
 
+#===================
+# REMNAWAVE MANAGER
+#===================
+
+# Color constants
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[1;33m'
+readonly BLUE='\033[0;34m'
+readonly PURPLE='\033[0;35m'
+readonly CYAN='\033[0;36m'
+readonly WHITE='\033[1;37m'
+readonly GRAY='\033[0;90m'
+readonly NC='\033[0m'
+
+# Status symbols
+readonly CHECK="✓"
+readonly CROSS="✗"
+readonly WARNING="!"
+readonly INFO="*"
+readonly ARROW="→"
+
 SCRIPT_VERSION="2.1.7"
 DIR_REMNAWAVE="/usr/local/remnawave_reverse/"
 
-COLOR_RESET="\033[0m"
-COLOR_GREEN="\033[1;32m"
-COLOR_YELLOW="\033[1;33m"
-COLOR_WHITE="\033[1;37m"
-COLOR_RED="\033[1;31m"
-COLOR_GRAY='\033[0;90m'
+#======================
+# VALIDATION FUNCTIONS
+#======================
 
-# Language variables
-declare -A LANG=(
-    #check
-    [ERROR_ROOT]="Script must be run as root"
-    [ERROR_OS]="Supported only Debian 11/12 and Ubuntu 22.04/24.04"
-    #Install Packages
-    [ERROR_UPDATE_LIST]="Failed to update package list"
-    [ERROR_INSTALL_PACKAGES]="Failed to install required packages"
-    [ERROR_INSTALL_CRON]="Failed to install cron"
-    [ERROR_START_CRON]="Failed to start cron"
-    [ERROR_CONFIGURE_LOCALES]="Error: Failed to configure locales"
-    [ERROR_DOWNLOAD_DOCKER_KEY]="Failed to download Docker GPG key"
-    [ERROR_UPDATE_DOCKER_LIST]="Failed to update package list after adding Docker repository"
-    [ERROR_INSTALL_DOCKER]="Failed to install Docker"
-    [ERROR_DOCKER_NOT_INSTALLED]="Docker is not installed"
-    [ERROR_START_DOCKER]="Failed to start Docker"
-    [ERROR_ENABLE_DOCKER]="Failed to enable Docker auto-start"
-    [ERROR_DOCKER_NOT_WORKING]="Docker is not working properly"
-    [ERROR_CONFIGURE_UFW]="Failed to configure UFW"
-    [ERROR_CONFIGURE_UPGRADES]="Failed to configure unattended-upgrades"
-    [ERROR_DOCKER_DNS]="Error: Unable to resolve download.docker.com. Check your DNS settings."
-    [ERROR_INSTALL_CERTBOT]="Error: Failed to install certbot"
-    [SUCCESS_INSTALL]="All packages installed successfully"
-    #Menu
-    [EXIT]="Exit"
-    [WARNING_LABEL]="WARNING:"
-    [CONFIRM_PROMPT]="Enter 'y' to continue or 'n' to exit (y/n):"
-    [WARNING_NODE_PANEL]="Adding a node should only be done on the server where the panel is installed, not on the node server."
-    [CONFIRM_SERVER_PANEL]="Are you sure you are on the server with the installed panel?"
-    #Manage Certificates
-    [CERT_INVALID_CHOICE]="Invalid choice. Please select 0-2."
-    #Install Remnawave Components
-    [INSTALL_PANEL]="Install only the panel"
-    [INSTALL_NODE]="Install only the node"
-    [INSTALL_PROMPT]="Select action (0-2):"
-    [INSTALL_INVALID_CHOICE]="Invalid choice. Please select 0-2."
-    #Remna
-    [INSTALL_PACKAGES]="Installing required packages..."
-    [INSTALLING]="Installing panel and node"
-    [INSTALLING_PANEL]="Installing panel"
-    [INSTALLING_NODE]="Installing node"
-    [ENTER_PANEL_DOMAIN]="Enter panel domain (e.g. panel.example.com):"
-    [ENTER_SUB_DOMAIN]="Enter subscription domain (e.g. sub.example.com):"
-    [ENTER_NODE_DOMAIN]="Enter selfsteal domain for node (e.g. node.example.com):"
-    [ENTER_CF_TOKEN]="Enter your Cloudflare API token or global API key:"
-    [ENTER_CF_EMAIL]="Enter your Cloudflare registered email:"
-    [CHECK_CERTS]="Checking certificates..."
-    [CERT_FOUND]="Certificates found in /etc/letsencrypt/live/"
-    [CF_VALIDATING]="Cloudflare API key and email are valid"
-    [CF_INVALID]="Invalid Cloudflare API token or email after %d attempts."
-    [CF_INVALID_ATTEMPT]="Invalid Cloudflare API key or email. Attempt %d of %d."
-    [WAITING]="Please wait..."
-    #API
-    [REGISTERING_REMNAWAVE]="Registration in Remnawave"
-    [CHECK_CONTAINERS]="Checking containers availability..."
-    [CONTAINERS_NOT_READY]="Containers are not ready, waiting..."
-    [REGISTRATION_SUCCESS]="Registration completed successfully!"
-    [GET_PUBLIC_KEY]="Getting public key..."
-    [PUBLIC_KEY_SUCCESS]="Public key successfully obtained"
-    [GENERATE_KEYS]="Generating x25519 keys..."
-    [GENERATE_KEYS_SUCCESS]="Keys successfully generated"
-    [ERROR_NO_CONFIGS]="No config profiles found"
-    [NO_DEFAULT_PROFILE]="Default-Profile not found"
-    [ERROR_DELETE_PROFILE]="Failed to delete profile"
-    [CREATING_CONFIG_PROFILE]="Creating config profile..."
-    [CONFIG_PROFILE_CREATED]="Config profile successfully created"
-    [CREATING_NODE]="Creating node"
-    [NODE_CREATED]="Node successfully created"
-    [CREATE_HOST]="Creating host"
-    [HOST_CREATED]="Host successfully created"
-    [GET_DEFAULT_SQUAD]="Getting default squad"
-    [UPDATE_SQUAD]="Squad successfully updated"
-    [NO_SQUADS_FOUND]="No squads found"
-    [INVALID_UUID_FORMAT]="Invalid UUID format"
-    [NO_VALID_SQUADS_FOUND]="No valid squads found"
-    [ERROR_GET_SQUAD]="Failed to get squad"
-    [INVALID_SQUAD_UUID]="Invalid squad UUID"
-    [INVALID_INBOUND_UUID]="Invalid inbound UUID"
-    #Menu End
-    [INSTALL_COMPLETE]="               INSTALLATION COMPLETE!"
-    [PANEL_ACCESS]="Panel URL:"
-    [ADMIN_CREDS]="To log into the panel, use the following data:"
-    [USERNAME]="Username:"
-    [PASSWORD]="Password:"
-    [RELAUNCH_CMD]="To relaunch the manager, use the following command:"
-    #RandomHTML
-    [RANDOM_TEMPLATE]="Installing random template for camouflage site"
-    [DOWNLOAD_FAIL]="Download failed, retrying..."
-    [UNPACK_ERROR]="Error unpacking archive"
-    [TEMPLATE_COPY]="Template copied to /var/www/html/"
-    [SELECT_TEMPLATE]="Selected template:"
-    #Error
-    [ERROR_TOKEN]="Failed to get token."
-    [ERROR_PUBLIC_KEY]="Failed to get public key."
-    [ERROR_EXTRACT_PUBLIC_KEY]="Failed to extract public key from response."
-    [ERROR_GENERATE_KEYS]="Failed to generate keys."
-    [ERROR_EMPTY_RESPONSE_NODE]="Empty response from server when creating node."
-    [ERROR_CREATE_NODE]="Failed to create node."
-    [ERROR_EMPTY_RESPONSE_HOST]="Empty response from server when creating host."
-    [ERROR_CREATE_HOST]="Failed to create host."
-    [ERROR_EMPTY_RESPONSE_REGISTER]="Registration error - empty server response"
-    [ERROR_REGISTER]="Registration error"
-    [ERROR_UPDATE_SQUAD]="Failed to update squad"
-    [ERROR_GET_SQUAD_LIST]="Failed to get squad list"
-    [NO_SQUADS_TO_UPDATE]="No squads to update"
-    #Reinstall Panel/Node
-    [POST_PANEL_INSTRUCTION]="To install the node, follow these steps:\n1. Run this script on the server where the node will be installed.\n2. Select 'Install Remnawave Components', then 'Install only the node'."
-    [SELFSTEAL]="Enter the selfsteal domain for the node specified during panel installation:"
-    [PANEL_IP_PROMPT]="Enter the IP address of the panel to establish a connection between the panel and the node:"
-    [IP_ERROR]="Enter a valid IP address in the format X.X.X.X (e.g., 192.168.1.1)"
-    [CERT_PROMPT]="Enter the certificate obtained from the panel, keeping the SSL_CERT= line (paste the content and press Enter twice):"
-    [CERT_CONFIRM]="Are you sure the certificate is correct? (y/n):"
-    [ABORT_MESSAGE]="Installation aborted by user"
-    #Node Check
-    [NODE_CHECK]="Checking node connection for %s..."
-    [NODE_ATTEMPT]="Attempt %d of %d..."
-    [NODE_UNAVAILABLE]="Node is unavailable on attempt %d."
-    [NODE_LAUNCHED]="Node successfully launched!"
-    [NODE_NOT_CONNECTED]="Node not connected after %d attempts!"
-    [CHECK_CONFIG]="Check the configuration or restart the panel."
-    #Add node to panel
-    [ADD_NODE_TO_PANEL]="Adding node to panel"
-    [ENTER_NODE_NAME]="Enter node name (e.g., Germany):"
-    [USING_SAVED_TOKEN]="Using saved token..."
-    [INVALID_SAVED_TOKEN]="Saved token is invalid. Requesting a new one..."
-    [ENTER_PANEL_USERNAME]="Enter panel username: "
-    [ENTER_PANEL_PASSWORD]="Enter panel password: "
-    [TOKEN_RECEIVED_AND_SAVED]="Token successfully received and saved"
-    [TOKEN_USED_SUCCESSFULLY]="Token successfully used"
-    [NODE_ADDED_SUCCESS]="Node successfully added!"
-    [CREATE_NEW_NODE]="Creating new node for %s..."
-    [CF_INVALID_NAME]="Error: The name of the configuration profile %s is already in use.\nPlease choose another name."
-    [CF_INVALID_LENGTH]="Error: The name of the configuration profile should contain from 3 to 20 characters."
-    [CF_INVALID_CHARS]="Error: The name of the configuration profile should contain only English letters, numbers, and hyphens."
-    #check
-    [GENERATING_CERTS]="Generating certificates for %s"
-    [REQUIRED_DOMAINS]="Required domains for certificates:"
-    [CHECK_DOMAIN_IP_FAIL]="Failed to determine the domain or server IP address."
-    [CHECK_DOMAIN_IP_FAIL_INSTRUCTION]="Ensure that the domain %s is correctly configured and points to this server (%s)."
-    [CHECK_DOMAIN_CLOUDFLARE]="The domain %s points to a Cloudflare IP (%s)."
-    [CHECK_DOMAIN_CLOUDFLARE_INSTRUCTION]="Cloudflare proxying is not allowed for the selfsteal domain. Disable proxying (switch to 'DNS Only')."
-    [CHECK_DOMAIN_MISMATCH]="The domain %s points to IP address %s, which differs from this server's IP (%s)."
-    [CHECK_DOMAIN_MISMATCH_INSTRUCTION]="For proper operation, the domain must point to the current server."
-    #Cert_choise
-    [CERT_METHOD_PROMPT]="Select certificate generation method for all domains:"
-    [CERT_METHOD_CF]="Cloudflare API (supports wildcard)"
-    [CERT_METHOD_CHOOSE]="Select option (0-2):"
-    [CERTS_SKIPPED]="All certificates already exist. Skipping generation."
-    [CERT_GENERATION_FAILED]="Certificate generation failed. Please check your input and DNS settings."
-    [ADDING_CRON_FOR_EXISTING_CERTS]="Adding cron job for certificate renewal..."
-    [CRON_ALREADY_EXISTS]="Cron job for certificate renewal already exists."
-    [CERT_NOT_FOUND]="Certificate not found for domain."
-    [ERROR_PARSING_CERT]="Error parsing certificate expiry date."
-    [CERT_EXPIRY_SOON]="Certificates will expire soon in"
-    [DAYS]="days"
-    [UPDATING_CRON]="Updating cron job to match certificate expiry."
-    [GENERATING_WILDCARD_CERT]="Generating wildcard certificate for"
-    [WILDCARD_CERT_FOUND]="Wildcard certificate found in /etc/letsencrypt/live/"
-    [FOR_DOMAIN]="for"
-    [START_CRON_ERROR]="Not able to start cron. Please start it manually."
-    [DOMAINS_MUST_BE_UNIQUE]="Error: All domains (panel, subscription, and node) must be unique."
-    [CHOOSE_TEMPLATE_SOURCE]="Select template source:"
-    [SIMPLE_WEB_TEMPLATES]="Simple web templates"
-    [SNI_TEMPLATES]="Sni templates"
-    [CHOOSE_TEMPLATE_OPTION]="Select option (0-2):"
-    [INVALID_TEMPLATE_CHOICE]="Invalid choice. Please select 0-2."
-)
-
-question() {
-    echo -e "${COLOR_GREEN}[?]${COLOR_RESET} ${COLOR_YELLOW}$*${COLOR_RESET}"
+# Domain validation
+validate_domain() {
+    local domain=$1
+    if [[ "$domain" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]] && [[ ! "$domain" =~ [[:space:]] ]]; then
+        return 0
+    fi
+    return 1
 }
 
-reading() {
-    read -rp " $(question "$1")" "$2"
+# IPv4 validation
+validate_ip() {
+    local ip=$1
+    if [[ "$ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+        return 0
+    fi
+    return 1
 }
+
+#=======================
+# SYSTEM CHECK FUNCTIONS
+#=======================
 
 error() {
-    echo -e "${COLOR_RED}$*${COLOR_RESET}"
+    echo -e "${RED}${CROSS}${NC} $1"
     exit 1
 }
 
 check_os() {
     if ! grep -q "bullseye" /etc/os-release && ! grep -q "bookworm" /etc/os-release && ! grep -q "jammy" /etc/os-release && ! grep -q "noble" /etc/os-release && ! grep -q "trixie" /etc/os-release; then
-        error "${LANG[ERROR_OS]}"
+        error "Supported only Debian 11/12 and Ubuntu 22.04/24.04"
     fi
 }
 
 check_root() {
     if [[ $EUID -ne 0 ]]; then
-        error "${LANG[ERROR_ROOT]}"
+        error "Script must be run as root"
     fi
 }
 
-log_clear() {
-  sed -i -e 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$LOGFILE"
+#=====================
+# MAIN MENU FUNCTIONS
+#=====================
+
+# Display main menu
+show_main_menu() {
+    echo
+    echo -e "${PURPLE}================${NC}"
+    echo -e "${WHITE}REMNAWAVE MANAGER${NC}"
+    echo -e "${PURPLE}================${NC}"
+    echo
+    echo -e "${CYAN}Please select installation type:${NC}"
+    echo
+    echo -e "${GREEN}1.${NC} Install Panel"
+    echo -e "${GREEN}2.${NC} Install Node"
+    echo -e "${RED}3.${NC} Exit"
+    echo
+    echo -ne "${CYAN}Enter your choice (1, 2, or 3): ${NC}"
 }
 
-log_entry() {
-  mkdir -p ${DIR_REMNAWAVE}
-  LOGFILE="${DIR_REMNAWAVE}remnawave_reverse.log"
-  exec > >(tee -a "$LOGFILE") 2>&1
-}
+#====================
+# UTILITY FUNCTIONS
+#====================
 
 generate_user() {
     local length=8
@@ -238,59 +117,15 @@ generate_password() {
     echo "$password"
 }
 
-#Manage Install Remnawave Components
-show_install_menu() {
-    echo -e ""
-    echo -e "${COLOR_GREEN}Select installation option:${COLOR_RESET}"
-    echo -e ""
-    echo -e "${COLOR_YELLOW}1. ${LANG[INSTALL_PANEL]}${COLOR_RESET}"
-    echo -e "${COLOR_YELLOW}2. ${LANG[INSTALL_NODE]}${COLOR_RESET}"
-    echo -e ""
-    echo -e "${COLOR_YELLOW}0. ${LANG[EXIT]}${COLOR_RESET}"
-    echo -e ""
+log_clear() {
+    sed -i -e 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$LOGFILE"
 }
 
-manage_install() {
-    show_install_menu
-    reading "${LANG[INSTALL_PROMPT]}" INSTALL_OPTION
-    case $INSTALL_OPTION in
-        1)
-            if [ ! -f "${DIR_REMNAWAVE}install_packages" ] || ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1 || ! command -v certbot >/dev/null 2>&1; then
-                install_packages || {
-                    echo -e "${COLOR_RED}${LANG[ERROR_INSTALL_DOCKER]}${COLOR_RESET}"
-                    log_clear
-                    exit 1
-                }
-            fi
-            installation_panel
-            sleep 2
-            log_clear
-            ;;
-        2)
-            if [ ! -f "${DIR_REMNAWAVE}install_packages" ] || ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1 || ! command -v certbot >/dev/null 2>&1; then
-                install_packages || {
-                    echo -e "${COLOR_RED}${LANG[ERROR_INSTALL_DOCKER]}${COLOR_RESET}"
-                    log_clear
-                    exit 1
-                }
-            fi
-            installation_node
-            sleep 2
-            log_clear
-            ;;
-        0)
-            echo -e "${COLOR_YELLOW}${LANG[EXIT]}${COLOR_RESET}"
-            exit 0
-            ;;
-        *)
-            echo -e "${COLOR_YELLOW}${LANG[INSTALL_INVALID_CHOICE]}${COLOR_RESET}"
-            sleep 2
-            log_clear
-            manage_install
-            ;;
-    esac
+log_entry() {
+    mkdir -p ${DIR_REMNAWAVE}
+    LOGFILE="${DIR_REMNAWAVE}remnawave_reverse.log"
+    exec > >(tee -a "$LOGFILE") 2>&1
 }
-#Manage Install Remnawave Components
 
 add_cron_rule() {
     local rule="$1"
@@ -306,192 +141,279 @@ add_cron_rule() {
 }
 
 spinner() {
-  local pid=$1
-  local text=$2
+    local pid=$1
+    local text=$2
 
-  export LC_ALL=en_US.UTF-8
-  export LANG=en_US.UTF-8
+    export LC_ALL=en_US.UTF-8
+    export LANG=en_US.UTF-8
 
-  local spinstr='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
-  local text_code="$COLOR_GREEN"
-  local bg_code=""
-  local effect_code="\033[1m"
-  local delay=0.1
-  local reset_code="$COLOR_RESET"
+    local spinstr='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+    local text_code="$GREEN"
+    local bg_code=""
+    local effect_code="\033[1m"
+    local delay=0.1
+    local reset_code="$NC"
 
-  printf "${effect_code}${text_code}${bg_code}%s${reset_code}" "$text" > /dev/tty
+    printf "${effect_code}${text_code}${bg_code}%s${reset_code}" "$text" > /dev/tty
 
-  while kill -0 "$pid" 2>/dev/null; do
-    for (( i=0; i<${#spinstr}; i++ )); do
-      printf "\r${effect_code}${text_code}${bg_code}[%s] %s${reset_code}" "$(echo -n "${spinstr:$i:1}")" "$text" > /dev/tty
-      sleep $delay
-    done
-  done
-
-  printf "\r\033[K" > /dev/tty
-}
-
-#Manage Template for steal
-show_template_source_options() {
-    echo -e ""
-    echo -e "${COLOR_GREEN}${LANG[CHOOSE_TEMPLATE_SOURCE]}${COLOR_RESET}"
-    echo -e ""
-    echo -e "${COLOR_YELLOW}1. ${LANG[SIMPLE_WEB_TEMPLATES]}${COLOR_RESET}"
-    echo -e "${COLOR_YELLOW}2. ${LANG[SNI_TEMPLATES]}${COLOR_RESET}"
-    echo -e ""
-    echo -e "${COLOR_YELLOW}0. ${LANG[EXIT]}${COLOR_RESET}"
-    echo -e ""
-}
-
-randomhtml() {
-    local template_source="$1"
-
-    cd /opt/ || { echo "${LANG[UNPACK_ERROR]}"; exit 1; }
-
-    rm -f main.zip 2>/dev/null
-    rm -rf simple-web-templates-main/ sni-templates-main/ 2>/dev/null
-
-    echo -e "${COLOR_YELLOW}${LANG[RANDOM_TEMPLATE]}${COLOR_RESET}"
-    sleep 1
-    spinner $$ "${LANG[WAITING]}" &
-    spinner_pid=$!
-
-    template_urls=(
-        "https://github.com/eGamesAPI/simple-web-templates/archive/refs/heads/main.zip"
-        "https://github.com/SmallPoppa/sni-templates/archive/refs/heads/main.zip"
-    )
-
-    if [ -z "$template_source" ]; then
-        selected_url=${template_urls[$RANDOM % ${#template_urls[@]}]}
-    else
-        if [ "$template_source" = "simple" ]; then
-            selected_url=${template_urls[0]}  # Simple web templates
-        else
-            selected_url=${template_urls[1]}  # Sni templates
-        fi
-    fi
-
-    while ! wget -q --timeout=30 --tries=10 --retry-connrefused "$selected_url"; do
-        echo "${LANG[DOWNLOAD_FAIL]}"
-        sleep 3
+    while kill -0 "$pid" 2>/dev/null; do
+        for (( i=0; i<${#spinstr}; i++ )); do
+            printf "\r${effect_code}${text_code}${bg_code}[%s] %s${reset_code}" "$(echo -n "${spinstr:$i:1}")" "$text" > /dev/tty
+            sleep $delay
+        done
     done
 
-    unzip -o main.zip &>/dev/null || { echo "${LANG[UNPACK_ERROR]}"; exit 0; }
-    rm -f main.zip
-
-    if [[ "$selected_url" == *"eGamesAPI"* ]]; then
-        cd simple-web-templates-main/ || { echo "${LANG[UNPACK_ERROR]}"; exit 0; }
-        rm -rf assets ".gitattributes" "README.md" "_config.yml" 2>/dev/null
-    else
-        cd sni-templates-main/ || { echo "${LANG[UNPACK_ERROR]}"; exit 0; }
-        rm -rf assets "README.md" "index.html" 2>/dev/null
-    fi
-
-    mapfile -t templates < <(find . -maxdepth 1 -type d -not -path . | sed 's|./||')
-
-    RandomHTML="${templates[$RANDOM % ${#templates[@]}]}"
-
-    if [[ "$selected_url" == *"SmallPoppa"* && "$RandomHTML" == "503 error pages" ]]; then
-        cd "$RandomHTML" || { echo "${LANG[UNPACK_ERROR]}"; exit 0; }
-        versions=("v1" "v2")
-        RandomVersion="${versions[$RANDOM % ${#versions[@]}]}"
-        RandomHTML="$RandomHTML/$RandomVersion"
-        cd ..
-    fi
-
-    local random_meta_id=$(openssl rand -hex 16)
-    local random_comment=$(openssl rand -hex 8)
-    local random_class_suffix=$(openssl rand -hex 4)
-    local random_title_prefix="Page_"
-    local random_title_suffix=$(openssl rand -hex 4)
-    local random_footer_text="Designed by RandomSite_${random_title_suffix}"
-    local random_id_suffix=$(openssl rand -hex 4)
-
-    local meta_names=("viewport-id" "session-id" "track-id" "render-id" "page-id" "config-id")
-    local random_meta_name=${meta_names[$RANDOM % ${#meta_names[@]}]}
-
-    local class_prefixes=("style" "data" "ui" "layout" "theme" "view")
-    local random_class_prefix=${class_prefixes[$RANDOM % ${#class_prefixes[@]}]}
-    local random_class="$random_class_prefix-$random_class_suffix"
-    local random_title="${random_title_prefix}${random_title_suffix}"
-
-    find "./$RandomHTML" -type f -name "*.html" -exec sed -i \
-        -e "s|<!-- Website template by freewebsitetemplates.com -->||" \
-        -e "s|<!-- Theme by: WebThemez.com -->||" \
-        -e "s|<a href=\"http://freewebsitetemplates.com\">Free Website Templates</a>|<span>${random_footer_text}</span>|" \
-        -e "s|<a href=\"http://webthemez.com\" alt=\"webthemez\">WebThemez.com</a>|<span>${random_footer_text}</span>|" \
-        -e "s|id=\"Content\"|id=\"rnd_${random_id_suffix}\"|" \
-        -e "s|id=\"subscribe\"|id=\"sub_${random_id_suffix}\"|" \
-        -e "s|<title>.*</title>|<title>${random_title}</title>|" \
-        -e "s/<\/head>/<meta name=\"$random_meta_name\" content=\"$random_meta_id\">\n<!-- $random_comment -->\n<\/head>/" \
-        -e "s/<body/<body class=\"$random_class\"/" \
-        {} \;
-
-    find "./$RandomHTML" -type f -name "*.css" -exec sed -i \
-        -e "1i\/* $random_comment */" \
-        -e "1i.$random_class { display: block; }" \
-        {} \;
-
-    kill "$spinner_pid" 2>/dev/null
-    wait "$spinner_pid" 2>/dev/null
     printf "\r\033[K" > /dev/tty
-
-    echo "${LANG[SELECT_TEMPLATE]}" "${RandomHTML}"
-
-    if [[ -d "${RandomHTML}" ]]; then
-        if [[ ! -d "/var/www/html/" ]]; then
-            mkdir -p "/var/www/html/" || { echo "Failed to create /var/www/html/"; exit 1; }
-        fi
-        rm -rf /var/www/html/*
-        cp -a "${RandomHTML}"/. "/var/www/html/"
-        echo "${LANG[TEMPLATE_COPY]}"
-    else
-        echo "${LANG[UNPACK_ERROR]}" && exit 1
-    fi
-
-    if ! find "/var/www/html" -type f -name "*.html" -exec grep -q "$random_meta_name" {} \; 2>/dev/null; then
-        echo -e "${COLOR_RED}${LANG[FAILED_TO_MODIFY_HTML_FILES]}${COLOR_RESET}"
-        return 1
-    fi
-
-    cd /opt/
-    rm -rf simple-web-templates-main/ sni-templates-main/
 }
-#Manage Template for steal
 
-install_packages() {
-    echo -e "${COLOR_YELLOW}${LANG[INSTALL_PACKAGES]}${COLOR_RESET}"
+extract_domain() {
+    local SUBDOMAIN=$1
+    echo "$SUBDOMAIN" | awk -F'.' '{if (NF > 2) {print $(NF-1)"."$NF} else {print $0}}'
+}
+
+#==============================
+# PANEL INPUT FUNCTIONS
+#==============================
+
+# Input panel domain
+input_panel_domain() {
+    echo -ne "${CYAN}Panel domain (e.g. panel.example.com): ${NC}"
+    read PANEL_DOMAIN
+    while [[ -z "$PANEL_DOMAIN" ]] || ! validate_domain "$PANEL_DOMAIN"; do
+        echo -e "${RED}${CROSS}${NC} Invalid domain! Please enter a valid domain."
+        echo
+        echo -ne "${CYAN}Panel domain: ${NC}"
+        read PANEL_DOMAIN
+    done
+}
+
+# Input subscription domain
+input_sub_domain() {
+    echo -ne "${CYAN}Subscription domain (e.g. sub.example.com): ${NC}"
+    read SUB_DOMAIN
+    while [[ -z "$SUB_DOMAIN" ]] || ! validate_domain "$SUB_DOMAIN"; do
+        echo -e "${RED}${CROSS}${NC} Invalid domain! Please enter a valid domain."
+        echo
+        echo -ne "${CYAN}Subscription domain: ${NC}"
+        read SUB_DOMAIN
+    done
+}
+
+# Input selfsteal domain
+input_selfsteal_domain() {
+    echo -ne "${CYAN}Selfsteal domain (e.g. node.example.com): ${NC}"
+    read SELFSTEAL_DOMAIN
+    while [[ -z "$SELFSTEAL_DOMAIN" ]] || ! validate_domain "$SELFSTEAL_DOMAIN"; do
+        echo -e "${RED}${CROSS}${NC} Invalid domain! Please enter a valid domain."
+        echo
+        echo -ne "${CYAN}Selfsteal domain: ${NC}"
+        read SELFSTEAL_DOMAIN
+    done
+}
+
+# Input Cloudflare API key
+input_cloudflare_api_key() {
+    echo -ne "${CYAN}Cloudflare API Key: ${NC}"
+    read CLOUDFLARE_API_KEY
+    while [[ -z "$CLOUDFLARE_API_KEY" ]]; do
+        echo -e "${RED}${CROSS}${NC} Cloudflare API Key cannot be empty!"
+        echo
+        echo -ne "${CYAN}Cloudflare API Key: ${NC}"
+        read CLOUDFLARE_API_KEY
+    done
+}
+
+# Input Cloudflare email
+input_cloudflare_email() {
+    echo -ne "${CYAN}Cloudflare Email: ${NC}"
+    read CLOUDFLARE_EMAIL
+    while [[ -z "$CLOUDFLARE_EMAIL" ]]; do
+        echo -e "${RED}${CROSS}${NC} Cloudflare Email cannot be empty!"
+        echo
+        echo -ne "${CYAN}Cloudflare Email: ${NC}"
+        read CLOUDFLARE_EMAIL
+    done
+}
+
+#======================
+# NODE INPUT FUNCTIONS
+#======================
+
+# Input node selfsteal domain
+input_node_selfsteal_domain() {
+    echo -ne "${CYAN}Selfsteal domain for node (e.g. node.example.com): ${NC}"
+    read NODE_SELFSTEAL_DOMAIN
+    while [[ -z "$NODE_SELFSTEAL_DOMAIN" ]] || ! validate_domain "$NODE_SELFSTEAL_DOMAIN"; do
+        echo -e "${RED}${CROSS}${NC} Invalid domain! Please enter a valid domain."
+        echo
+        echo -ne "${CYAN}Selfsteal domain for node: ${NC}"
+        read NODE_SELFSTEAL_DOMAIN
+    done
+}
+
+# Input panel IP for node
+input_panel_ip() {
+    echo -ne "${CYAN}Panel IP address: ${NC}"
+    read PANEL_IP
+    while [[ -z "$PANEL_IP" ]] || ! validate_ip "$PANEL_IP"; do
+        echo -e "${RED}${CROSS}${NC} Invalid IP! Please enter a valid IPv4 address (e.g., 1.2.3.4)."
+        echo
+        echo -ne "${CYAN}Panel IP address: ${NC}"
+        read PANEL_IP
+    done
+}
+
+# Input SSL certificate for node
+input_ssl_certificate() {
+    echo -e "${CYAN}Enter the SSL certificate obtained from the panel:"
+    echo -e "${GRAY}Keep the SSL_CERT= line and paste the content, then press Enter twice${NC}"
+    CERTIFICATE=""
+    while IFS= read -r line; do
+        if [ -z "$line" ]; then
+            if [ -n "$CERTIFICATE" ]; then
+                break
+            fi
+        else
+            CERTIFICATE="$CERTIFICATE$line\n"
+        fi
+    done
+
+    echo -ne "${CYAN}Are you sure the certificate is correct? (y/n): ${NC}"
+    read confirm
+    echo
+
+    if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+        echo -e "${RED}${CROSS}${NC} Installation aborted by user"
+        exit 1
+    fi
+}
+
+#==================================
+# CONFIGURATION GENERATION FUNCTIONS
+#==================================
+
+# Generate configuration variables
+generate_configuration() {
+    echo -e "${CYAN}${INFO}${NC} Generating all configuration variables..."
     
-    if ! apt-get update -y; then
-        echo -e "${COLOR_RED}${LANG[ERROR_UPDATE_LIST]}${COLOR_RESET}" >&2
+    echo -e "${GRAY}  ${ARROW}${NC} Creating admin credentials"
+    SUPERADMIN_USERNAME=$(generate_user)
+    SUPERADMIN_PASSWORD=$(generate_password)
+    
+    echo -e "${GRAY}  ${ARROW}${NC} Creating cookies and metrics credentials"
+    cookies_random1=$(generate_user)
+    cookies_random2=$(generate_user)
+    METRICS_USER=$(generate_user)
+    METRICS_PASS=$(generate_user)
+    
+    echo -e "${GRAY}  ${ARROW}${NC} Generating JWT secrets"
+    JWT_AUTH_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 64)
+    JWT_API_TOKENS_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 64)
+    
+    echo -e "${GREEN}${CHECK}${NC} All configuration variables generated!"
+}
+
+# Save variables to file
+save_variables_to_file() {
+    echo -e "${CYAN}${INFO}${NC} Saving configuration variables..."
+    echo -e "${GRAY}  ${ARROW}${NC} Creating variables file"
+    cat > remnawave-vars.sh << EOF
+# User provided domains and credentials
+export PANEL_DOMAIN="$PANEL_DOMAIN"
+export SUB_DOMAIN="$SUB_DOMAIN"
+export SELFSTEAL_DOMAIN="$SELFSTEAL_DOMAIN"
+export CLOUDFLARE_API_KEY="$CLOUDFLARE_API_KEY"
+export CLOUDFLARE_EMAIL="$CLOUDFLARE_EMAIL"
+
+# Auto-generated admin credentials
+export SUPERADMIN_USERNAME="$SUPERADMIN_USERNAME"
+export SUPERADMIN_PASSWORD="$SUPERADMIN_PASSWORD"
+export cookies_random1="$cookies_random1"
+export cookies_random2="$cookies_random2"
+export METRICS_USER="$METRICS_USER"
+export METRICS_PASS="$METRICS_PASS"
+
+# JWT secrets
+export JWT_AUTH_SECRET="$JWT_AUTH_SECRET"
+export JWT_API_TOKENS_SECRET="$JWT_API_TOKENS_SECRET"
+EOF
+    
+    echo -e "${GRAY}  ${ARROW}${NC} Loading environment variables"
+    source remnawave-vars.sh
+    echo -e "${GREEN}${CHECK}${NC} Variables saved to remnawave-vars.sh!"
+}
+
+# Save node variables to file
+save_node_variables_to_file() {
+    echo -e "${CYAN}${INFO}${NC} Saving node configuration variables..."
+    echo -e "${GRAY}  ${ARROW}${NC} Creating variables file"
+    cat > remnawave-node-vars.sh << EOF
+# User provided node configuration
+export SELFSTEAL_DOMAIN="$NODE_SELFSTEAL_DOMAIN"
+export PANEL_IP="$PANEL_IP"
+export CERTIFICATE="$CERTIFICATE"
+EOF
+    
+    echo -e "${GRAY}  ${ARROW}${NC} Loading environment variables"
+    source remnawave-node-vars.sh
+    echo -e "${GREEN}${CHECK}${NC} Variables saved to remnawave-node-vars.sh!"
+}
+
+# Move variables file
+move_variables_file() {
+    echo -e "${CYAN}${INFO}${NC} Moving configuration files..."
+    echo -e "${GRAY}  ${ARROW}${NC} Moving variables file to project directory"
+    mkdir -p "$APP_DIR"
+    if [ -f /root/remnawave-vars.sh ]; then
+        mv /root/remnawave-vars.sh "$APP_DIR/"
+    fi
+    if [ -f /root/remnawave-node-vars.sh ]; then
+        mv /root/remnawave-node-vars.sh "$APP_DIR/"
+    fi
+    echo -e "${GREEN}${CHECK}${NC} Configuration files moved!"
+}
+
+#=====================================
+# SYSTEM INSTALLATION FUNCTIONS
+#=====================================
+
+install_system_packages() {
+    echo -e "${CYAN}${INFO}${NC} Installing basic packages..."
+    echo -e "${GRAY}  ${ARROW}${NC} Updating package lists"
+    
+    if ! apt-get update -y > /dev/null 2>&1; then
+        echo -e "${RED}${CROSS}${NC} Failed to update package list"
         return 1
     fi
 
-    if ! apt-get install -y ca-certificates curl jq ufw wget gnupg unzip nano dialog git certbot python3-certbot-dns-cloudflare unattended-upgrades locales dnsutils coreutils grep gawk; then
-        echo -e "${COLOR_RED}${LANG[ERROR_INSTALL_PACKAGES]}${COLOR_RESET}" >&2
+    echo -e "${GRAY}  ${ARROW}${NC} Installing essential packages"
+    if ! apt-get install -y ca-certificates curl jq ufw wget gnupg unzip nano dialog git certbot python3-certbot-dns-cloudflare unattended-upgrades locales dnsutils coreutils grep gawk > /dev/null 2>&1; then
+        echo -e "${RED}${CROSS}${NC} Failed to install required packages"
         return 1
     fi
 
+    echo -e "${GRAY}  ${ARROW}${NC} Installing and configuring cron service"
     if ! dpkg -l | grep -q '^ii.*cron '; then
-        if ! apt-get install -y cron; then
-            echo -e "${COLOR_RED}${LANG[ERROR_INSTALL_CRON]}" "${COLOR_RESET}" >&2
+        if ! apt-get install -y cron > /dev/null 2>&1; then
+            echo -e "${RED}${CROSS}${NC} Failed to install cron"
             return 1
         fi
     fi
 
     if ! systemctl is-active --quiet cron; then
-        if ! systemctl start cron; then
-            echo -e "${COLOR_RED}${LANG[START_CRON_ERROR]}${COLOR_RESET}" >&2
+        if ! systemctl start cron > /dev/null 2>&1; then
+            echo -e "${RED}${CROSS}${NC} Not able to start cron. Please start it manually."
             return 1
         fi
     fi
     if ! systemctl is-enabled --quiet cron; then
-        if ! systemctl enable cron; then
-            echo -e "${COLOR_RED}${LANG[START_CRON_ERROR]}${COLOR_RESET}" >&2
+        if ! systemctl enable cron > /dev/null 2>&1; then
+            echo -e "${RED}${CROSS}${NC} Not able to start cron. Please start it manually."
             return 1
         fi
     fi
 
+    echo -e "${GRAY}  ${ARROW}${NC} Configuring locales"
     if [ ! -f /etc/locale.gen ]; then
         echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
     fi
@@ -502,20 +424,22 @@ install_packages() {
             echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
         fi
     fi
-    if ! locale-gen || ! update-locale LANG=en_US.UTF-8; then
-        echo -e "${COLOR_RED}${LANG[ERROR_CONFIGURE_LOCALES]}${COLOR_RESET}" >&2
+    if ! locale-gen > /dev/null 2>&1 || ! update-locale LANG=en_US.UTF-8 > /dev/null 2>&1; then
+        echo -e "${RED}${CROSS}${NC} Error: Failed to configure locales"
         return 1
     fi
 
+    echo -e "${GRAY}  ${ARROW}${NC} Checking Docker DNS connectivity"
     if ! ping -c 1 download.docker.com >/dev/null 2>&1; then
-        echo -e "${COLOR_RED}${LANG[ERROR_DOCKER_DNS]}${COLOR_RESET}" >&2
+        echo -e "${RED}${CROSS}${NC} Error: Unable to resolve download.docker.com. Check your DNS settings."
         return 1
     fi
 
+    echo -e "${GRAY}  ${ARROW}${NC} Adding Docker repository"
     if grep -q "Ubuntu" /etc/os-release; then
         install -m 0755 -d /etc/apt/keyrings
         if ! curl -fsSL https://download.docker.com/linux/ubuntu/gpg | tee /etc/apt/keyrings/docker.asc > /dev/null; then
-            echo -e "${COLOR_RED}${LANG[ERROR_DOWNLOAD_DOCKER_KEY]}${COLOR_RESET}" >&2
+            echo -e "${RED}${CROSS}${NC} Failed to download Docker GPG key"
             return 1
         fi
         chmod a+r /etc/apt/keyrings/docker.asc
@@ -523,48 +447,53 @@ install_packages() {
     elif grep -q "Debian" /etc/os-release; then
         install -m 0755 -d /etc/apt/keyrings
         if ! curl -fsSL https://download.docker.com/linux/debian/gpg | tee /etc/apt/keyrings/docker.asc > /dev/null; then
-            echo -e "${COLOR_RED}${LANG[ERROR_DOWNLOAD_DOCKER_KEY]}${COLOR_RESET}" >&2
+            echo -e "${RED}${CROSS}${NC} Failed to download Docker GPG key"
             return 1
         fi
         chmod a+r /etc/apt/keyrings/docker.asc
         echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
     fi
 
-    if ! apt-get update; then
-        echo -e "${COLOR_RED}${LANG[ERROR_UPDATE_DOCKER_LIST]}${COLOR_RESET}" >&2
+    echo -e "${GRAY}  ${ARROW}${NC} Updating package list after adding Docker repository"
+    if ! apt-get update > /dev/null 2>&1; then
+        echo -e "${RED}${CROSS}${NC} Failed to update package list after adding Docker repository"
         return 1
     fi
 
-    if ! apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin; then
-        echo -e "${COLOR_RED}${LANG[ERROR_INSTALL_DOCKER]}${COLOR_RESET}" >&2
+    echo -e "${GRAY}  ${ARROW}${NC} Installing Docker packages"
+    if ! apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin > /dev/null 2>&1; then
+        echo -e "${RED}${CROSS}${NC} Failed to install Docker"
         return 1
     fi
 
+    echo -e "${GRAY}  ${ARROW}${NC} Verifying Docker installation"
     if ! command -v docker >/dev/null 2>&1; then
-        echo -e "${COLOR_RED}${LANG[ERROR_DOCKER_NOT_INSTALLED]}${COLOR_RESET}" >&2
+        echo -e "${RED}${CROSS}${NC} Docker is not installed"
         return 1
     fi
 
+    echo -e "${GRAY}  ${ARROW}${NC} Starting Docker service"
     if ! systemctl is-active --quiet docker; then
-        if ! systemctl start docker; then
-            echo -e "${COLOR_RED}${LANG[ERROR_START_DOCKER]}${COLOR_RESET}" >&2
+        if ! systemctl start docker > /dev/null 2>&1; then
+            echo -e "${RED}${CROSS}${NC} Failed to start Docker"
             return 1
         fi
     fi
 
+    echo -e "${GRAY}  ${ARROW}${NC} Enabling Docker auto-start"
     if ! systemctl is-enabled --quiet docker; then
-        if ! systemctl enable docker; then
-            echo -e "${COLOR_RED}${LANG[ERROR_ENABLE_DOCKER]}${COLOR_RESET}" >&2
+        if ! systemctl enable docker > /dev/null 2>&1; then
+            echo -e "${RED}${CROSS}${NC} Failed to enable Docker auto-start"
             return 1
         fi
     fi
 
     if ! docker info >/dev/null 2>&1; then
-        echo -e "${COLOR_RED}${LANG[ERROR_DOCKER_NOT_WORKING]}${COLOR_RESET}" >&2
+        echo -e "${RED}${CROSS}${NC} Docker is not working properly"
         return 1
     fi
 
-    # BBR
+    echo -e "${GRAY}  ${ARROW}${NC} Configuring TCP optimizations (BBR)"
     if ! grep -q "net.core.default_qdisc = fq" /etc/sysctl.conf; then
         echo "net.core.default_qdisc = fq" >> /etc/sysctl.conf
     fi
@@ -573,29 +502,27 @@ install_packages() {
     fi
     sysctl -p >/dev/null
 
-    # UFW
-    if ! ufw allow 22/tcp comment 'SSH' || ! ufw allow 443/tcp comment 'HTTPS' || ! ufw --force enable; then
-        echo -e "${COLOR_RED}${LANG[ERROR_CONFIGURE_UFW]}${COLOR_RESET}" >&2
+    echo -e "${GRAY}  ${ARROW}${NC} Configuring UFW firewall"
+    if ! ufw allow 22/tcp comment 'SSH' > /dev/null 2>&1 || ! ufw allow 443/tcp comment 'HTTPS' > /dev/null 2>&1 || ! ufw --force enable > /dev/null 2>&1; then
+        echo -e "${RED}${CROSS}${NC} Failed to configure UFW"
         return 1
     fi
 
-    # Unattended-upgrades
+    echo -e "${GRAY}  ${ARROW}${NC} Configuring automatic security updates"
     echo 'Unattended-Upgrade::Mail "root";' >> /etc/apt/apt.conf.d/50unattended-upgrades
     echo unattended-upgrades unattended-upgrades/enable_auto_updates boolean true | debconf-set-selections
-    if ! dpkg-reconfigure -f noninteractive unattended-upgrades || ! systemctl restart unattended-upgrades; then
-        echo -e "${COLOR_RED}${LANG[ERROR_CONFIGURE_UPGRADES]}" "${COLOR_RESET}" >&2
+    if ! dpkg-reconfigure -f noninteractive unattended-upgrades > /dev/null 2>&1 || ! systemctl restart unattended-upgrades > /dev/null 2>&1; then
+        echo -e "${RED}${CROSS}${NC} Failed to configure unattended-upgrades"
         return 1
     fi
 
     touch ${DIR_REMNAWAVE}install_packages
-    echo -e "${COLOR_GREEN}${LANG[SUCCESS_INSTALL]}${COLOR_RESET}"
-    clear
+    echo -e "${GREEN}${CHECK}${NC} All packages installed successfully"
 }
 
-extract_domain() {
-    local SUBDOMAIN=$1
-    echo "$SUBDOMAIN" | awk -F'.' '{if (NF > 2) {print $(NF-1)"."$NF} else {print $0}}'
-}
+#=======================
+# DOMAIN CHECK FUNCTIONS
+#=======================
 
 check_domain() {
     local domain="$1"
@@ -607,10 +534,11 @@ check_domain() {
 
     if [ -z "$domain_ip" ] || [ -z "$server_ip" ]; then
         if [ "$show_warning" = true ]; then
-            echo -e "${COLOR_YELLOW}${LANG[WARNING_LABEL]}${COLOR_RESET}"
-            echo -e "${COLOR_RED}${LANG[CHECK_DOMAIN_IP_FAIL]}${COLOR_RESET}"
-            printf "${COLOR_YELLOW}${LANG[CHECK_DOMAIN_IP_FAIL_INSTRUCTION]}${COLOR_RESET}\n" "$domain" "$server_ip"
-            reading "${LANG[CONFIRM_PROMPT]}" confirm
+            echo -e "${YELLOW}WARNING:${NC}"
+            echo -e "${RED}Failed to determine the domain or server IP address.${NC}"
+            printf "${YELLOW}Ensure that the domain %s is correctly configured and points to this server (%s).${NC}\n" "$domain" "$server_ip"
+            echo -ne "${CYAN}Enter 'y' to continue or 'n' to exit (y/n): ${NC}"
+            read confirm
             if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
                 return 2
             fi
@@ -621,7 +549,9 @@ check_domain() {
     local cf_ranges=$(curl -s https://www.cloudflare.com/ips-v4)
     local cf_array=()
     if [ -n "$cf_ranges" ]; then
-        IFS=$'\n' read -r -d '' -a cf_array <<<"$cf_ranges"
+        while IFS= read -r line; do
+            [ -n "$line" ] && cf_array+=("$line")
+        done <<< "$cf_ranges"
     fi
 
     local ip_in_cloudflare=false
@@ -657,10 +587,11 @@ check_domain() {
             return 0
         else
             if [ "$show_warning" = true ]; then
-                echo -e "${COLOR_YELLOW}${LANG[WARNING_LABEL]}${COLOR_RESET}"
-                printf "${COLOR_RED}${LANG[CHECK_DOMAIN_CLOUDFLARE]}${COLOR_RESET}\n" "$domain" "$domain_ip"
-                echo -e "${COLOR_YELLOW}${LANG[CHECK_DOMAIN_CLOUDFLARE_INSTRUCTION]}${COLOR_RESET}"
-                reading "${LANG[CONFIRM_PROMPT]}" confirm
+                echo -e "${YELLOW}WARNING:${NC}"
+                printf "${RED}The domain %s points to a Cloudflare IP (%s).${NC}\n" "$domain" "$domain_ip"
+                echo -e "${YELLOW}Cloudflare proxying is not allowed for the selfsteal domain. Disable proxying (switch to 'DNS Only').${NC}"
+                echo -ne "${CYAN}Enter 'y' to continue or 'n' to exit (y/n): ${NC}"
+                read confirm
                 if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
                     return 1
                 else
@@ -671,10 +602,11 @@ check_domain() {
         fi
     else
         if [ "$show_warning" = true ]; then
-            echo -e "${COLOR_YELLOW}${LANG[WARNING_LABEL]}${COLOR_RESET}"
-            printf "${COLOR_RED}${LANG[CHECK_DOMAIN_MISMATCH]}${COLOR_RESET}\n" "$domain" "$domain_ip" "$server_ip"
-            echo -e "${COLOR_YELLOW}${LANG[CHECK_DOMAIN_MISMATCH_INSTRUCTION]}${COLOR_RESET}"
-            reading "${LANG[CONFIRM_PROMPT]}" confirm
+            echo -e "${YELLOW}WARNING:${NC}"
+            printf "${RED}The domain %s points to IP address %s, which differs from this server's IP (%s).${NC}\n" "$domain" "$domain_ip" "$server_ip"
+            echo -e "${YELLOW}For proper operation, the domain must point to the current server.${NC}"
+            echo -ne "${CYAN}Enter 'y' to continue or 'n' to exit (y/n): ${NC}"
+            read confirm
             if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
                 return 1
             else
@@ -707,7 +639,7 @@ check_certificates() {
     local cert_dir="/etc/letsencrypt/live"
 
     if [ ! -d "$cert_dir" ]; then
-        echo -e "${COLOR_RED}${LANG[CERT_NOT_FOUND]} $DOMAIN${COLOR_RESET}"
+        echo -e "${RED}Certificate not found for domain $DOMAIN${NC}"
         return 1
     fi
 
@@ -717,18 +649,18 @@ check_certificates() {
         for file in "${files[@]}"; do
             local file_path="$live_dir/$file"
             if [ ! -f "$file_path" ]; then
-                echo -e "${COLOR_RED}${LANG[CERT_NOT_FOUND]} $DOMAIN (missing $file)${COLOR_RESET}"
+                echo -e "${RED}Certificate not found for domain $DOMAIN (missing $file)${NC}"
                 return 1
             fi
             if [ ! -L "$file_path" ]; then
                 fix_letsencrypt_structure "$(basename "$live_dir")"
                 if [ $? -ne 0 ]; then
-                    echo -e "${COLOR_RED}${LANG[CERT_NOT_FOUND]} $DOMAIN (failed to fix structure)${COLOR_RESET}"
+                    echo -e "${RED}Certificate not found for domain $DOMAIN (failed to fix structure)${NC}"
                     return 1
                 fi
             fi
         done
-        echo -e "${COLOR_GREEN}${LANG[CERT_FOUND]}$(basename "$live_dir")${COLOR_RESET}"
+        echo -e "${GREEN}Certificates found in /etc/letsencrypt/live/$(basename "$live_dir")${NC}"
         return 0
     fi
 
@@ -736,12 +668,12 @@ check_certificates() {
     if [ "$base_domain" != "$DOMAIN" ]; then
         live_dir=$(find "$cert_dir" -maxdepth 1 -type d -name "${base_domain}*" 2>/dev/null | sort -V | tail -n 1)
         if [ -n "$live_dir" ] && [ -d "$live_dir" ] && is_wildcard_cert "$base_domain"; then
-            echo -e "${COLOR_GREEN}${LANG[WILDCARD_CERT_FOUND]}$base_domain ${LANG[FOR_DOMAIN]} $DOMAIN${COLOR_RESET}"
+            echo -e "${GREEN}Wildcard certificate found in /etc/letsencrypt/live/$base_domain for $DOMAIN${NC}"
             return 0
         fi
     fi
 
-    echo -e "${COLOR_RED}${LANG[CERT_NOT_FOUND]} $DOMAIN${COLOR_RESET}"
+    echo -e "${RED}Certificate not found for domain $DOMAIN${NC}"
     return 1
 }
 
@@ -757,18 +689,21 @@ check_api() {
         fi
 
         if echo "$api_response" | grep -q '"success":true'; then
-            echo -e "${COLOR_GREEN}${LANG[CF_VALIDATING]}${COLOR_RESET}"
+            echo -e "${GREEN}Cloudflare API key and email are valid${NC}"
             return 0
         else
-            echo -e "${COLOR_RED}$(printf "${LANG[CF_INVALID_ATTEMPT]}" "$attempt" "$attempts")${COLOR_RESET}"
+            echo -e "${RED}Invalid Cloudflare API key or email. Attempt $attempt of $attempts.${NC}"
             if [ $attempt -lt $attempts ]; then
-                reading "${LANG[ENTER_CF_TOKEN]}" CLOUDFLARE_API_KEY
-                reading "${LANG[ENTER_CF_EMAIL]}" CLOUDFLARE_EMAIL
+                echo -ne "${CYAN}Enter your Cloudflare API token or global API key: ${NC}"
+                read CLOUDFLARE_API_KEY
+                echo -ne "${CYAN}Enter your Cloudflare registered email: ${NC}"
+                read CLOUDFLARE_EMAIL
             fi
             attempt=$((attempt + 1))
         fi
     done
-    error "$(printf "${LANG[CF_INVALID]}" "$attempts")"
+    echo -e "${RED}Invalid Cloudflare API token or email after $attempts attempts.${NC}"
+    exit 1
 }
 
 get_certificates() {
@@ -778,13 +713,15 @@ get_certificates() {
     local BASE_DOMAIN=$(extract_domain "$DOMAIN")
     local WILDCARD_DOMAIN="*.$BASE_DOMAIN"
 
-    printf "${COLOR_YELLOW}${LANG[GENERATING_CERTS]}${COLOR_RESET}\n" "$DOMAIN"
+    printf "${YELLOW}Generating certificates for %s${NC}\n" "$DOMAIN"
 
     case $CERT_METHOD in
         1)
             # Cloudflare API (DNS-01 support wildcard)
-            reading "${LANG[ENTER_CF_TOKEN]}" CLOUDFLARE_API_KEY
-            reading "${LANG[ENTER_CF_EMAIL]}" CLOUDFLARE_EMAIL
+            echo -ne "${CYAN}Enter your Cloudflare API token or global API key: ${NC}"
+            read CLOUDFLARE_API_KEY
+            echo -ne "${CYAN}Enter your Cloudflare registered email: ${NC}"
+            read CLOUDFLARE_EMAIL
 
             check_api
 
@@ -814,13 +751,13 @@ EOL
                 --elliptic-curve secp384r1
             ;;
         *)
-            echo -e "${COLOR_RED}${LANG[INVALID_CERT_METHOD]}${COLOR_RESET}"
+            echo -e "${RED}Invalid certificate method${NC}"
             exit 1
             ;;
     esac
 
     if [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
-        echo -e "${COLOR_RED}${LANG[CERT_GENERATION_FAILED]} $DOMAIN${COLOR_RESET}"
+        echo -e "${RED}Certificate generation failed for $DOMAIN${NC}"
         exit 1
     fi
 }
@@ -838,12 +775,12 @@ check_cert_expiry() {
     fi
     local expiry_date=$(openssl x509 -in "$cert_file" -noout -enddate | sed 's/notAfter=//')
     if [ -z "$expiry_date" ]; then
-        echo -e "${COLOR_RED}${LANG[ERROR_PARSING_CERT]}${COLOR_RESET}"
+        echo -e "${RED}Error parsing certificate expiry date.${NC}"
         return 1
     fi
     local expiry_epoch=$(TZ=UTC date -d "$expiry_date" +%s 2>/dev/null)
     if [ $? -ne 0 ]; then
-        echo -e "${COLOR_RED}${LANG[ERROR_PARSING_CERT]}${COLOR_RESET}"
+        echo -e "${RED}Error parsing certificate expiry date.${NC}"
         return 1
     fi
     local current_epoch=$(date +%s)
@@ -859,27 +796,27 @@ fix_letsencrypt_structure() {
     local renewal_conf="/etc/letsencrypt/renewal/$domain.conf"
 
     if [ ! -d "$live_dir" ]; then
-        echo -e "${COLOR_RED}${LANG[CERT_NOT_FOUND]}${COLOR_RESET}"
+        echo -e "${RED}Certificate not found${NC}"
         return 1
     fi
     if [ ! -d "$archive_dir" ]; then
-        echo -e "${COLOR_RED}${LANG[ARCHIVE_NOT_FOUND]}${COLOR_RESET}"
+        echo -e "${RED}Archive directory not found${NC}"
         return 1
     fi
     if [ ! -f "$renewal_conf" ]; then
-        echo -e "${COLOR_RED}${LANG[RENEWAL_CONF_NOT_FOUND]}${COLOR_RESET}"
+        echo -e "${RED}Renewal configuration not found${NC}"
         return 1
     fi
 
     local conf_archive_dir=$(grep "^archive_dir" "$renewal_conf" | cut -d'=' -f2 | tr -d ' ')
     if [ "$conf_archive_dir" != "$archive_dir" ]; then
-        echo -e "${COLOR_RED}${LANG[ARCHIVE_DIR_MISMATCH]}${COLOR_RESET}"
+        echo -e "${RED}Archive directory mismatch${NC}"
         return 1
     fi
 
     local latest_version=$(ls -1 "$archive_dir" | grep -E 'cert[0-9]+.pem' | sort -V | tail -n 1 | sed -E 's/.*cert([0-9]+)\.pem/\1/')
     if [ -z "$latest_version" ]; then
-        echo -e "${COLOR_RED}${LANG[CERT_VERSION_NOT_FOUND]}${COLOR_RESET}"
+        echo -e "${RED}Certificate version not found${NC}"
         return 1
     fi
 
@@ -888,7 +825,7 @@ fix_letsencrypt_structure() {
         local archive_file="$archive_dir/$file$latest_version.pem"
         local live_file="$live_dir/$file.pem"
         if [ ! -f "$archive_file" ]; then
-            echo -e "${COLOR_RED}${LANG[FILE_NOT_FOUND]} $archive_file${COLOR_RESET}"
+            echo -e "${RED}File not found: $archive_file${NC}"
             return 1
         fi
         if [ -f "$live_file" ] && [ ! -L "$live_file" ]; then
@@ -922,9 +859,109 @@ fix_letsencrypt_structure() {
     chmod 600 "$live_dir/privkey.pem"
     return 0
 }
-#Manage Certificates
 
-### API Functions ###
+handle_certificates() {
+    local -n domains_to_check_ref=$1
+    local cert_method="$2"
+    local letsencrypt_email="$3"
+    local target_dir="/opt/remnawave"
+
+    declare -A unique_domains
+    local need_certificates=false
+    local min_days_left=9999
+
+    echo -e "${YELLOW}Checking certificates...${NC}"
+    sleep 1
+
+    echo -e "${YELLOW}Required domains for certificates:${NC}"
+    for domain in "${!domains_to_check_ref[@]}"; do
+        echo -e "${WHITE}- $domain${NC}"
+    done
+
+    for domain in "${!domains_to_check_ref[@]}"; do
+        if ! check_certificates "$domain"; then
+            need_certificates=true
+        else
+            days_left=$(check_cert_expiry "$domain")
+            if [ $? -eq 0 ] && [ "$days_left" -lt "$min_days_left" ]; then
+                min_days_left=$days_left
+            fi
+        fi
+    done
+
+    if [ "$need_certificates" = true ]; then
+        cert_method="1"
+    else
+        echo -e "${GREEN}All certificates already exist. Skipping generation.${NC}"
+        cert_method="1"
+    fi
+
+    declare -A cert_domains_added
+    if [ "$need_certificates" = true ] && [ "$cert_method" == "1" ]; then
+        for domain in "${!domains_to_check_ref[@]}"; do
+            local base_domain=$(extract_domain "$domain")
+            unique_domains["$base_domain"]="1"
+        done
+
+        for domain in "${!unique_domains[@]}"; do
+            get_certificates "$domain" "$cert_method" ""
+            if [ $? -ne 0 ]; then
+                echo -e "${RED}Certificate generation failed. Please check your input and DNS settings. $domain${NC}"
+                return 1
+            fi
+            min_days_left=90
+            if [ -z "${cert_domains_added[$domain]}" ]; then
+                echo "      - /etc/letsencrypt/live/$domain/fullchain.pem:/etc/nginx/ssl/$domain/fullchain.pem:ro" >> "$target_dir/docker-compose.yml"
+                echo "      - /etc/letsencrypt/live/$domain/privkey.pem:/etc/nginx/ssl/$domain/privkey.pem:ro" >> "$target_dir/docker-compose.yml"
+                cert_domains_added["$domain"]="1"
+            fi
+        done
+    else
+        for domain in "${!domains_to_check_ref[@]}"; do
+            local base_domain=$(extract_domain "$domain")
+            local cert_domain="$domain"
+            if [ -d "/etc/letsencrypt/live/$base_domain" ] && is_wildcard_cert "$base_domain"; then
+                cert_domain="$base_domain"
+            fi
+            if [ -z "${cert_domains_added[$cert_domain]}" ]; then
+                echo "      - /etc/letsencrypt/live/$cert_domain/fullchain.pem:/etc/nginx/ssl/$cert_domain/fullchain.pem:ro" >> "$target_dir/docker-compose.yml"
+                echo "      - /etc/letsencrypt/live/$cert_domain/privkey.pem:/etc/nginx/ssl/$cert_domain/privkey.pem:ro" >> "$target_dir/docker-compose.yml"
+                cert_domains_added["$cert_domain"]="1"
+            fi
+        done
+    fi
+
+    local cron_command="/usr/bin/certbot renew --quiet"
+
+    if ! crontab -u root -l 2>/dev/null | grep -q "/usr/bin/certbot renew"; then
+        echo -e "${YELLOW}Adding cron job for certificate renewal...${NC}"
+        if [ "$min_days_left" -le 30 ]; then
+            echo -e "${YELLOW}Certificates will expire soon in $min_days_left days${NC}"
+            add_cron_rule "0 5 * * * $cron_command"
+        else
+            add_cron_rule "0 5 1 */2 * $cron_command"
+        fi
+    else
+        echo -e "${YELLOW}Cron job for certificate renewal already exists.${NC}"
+    fi
+
+    for domain in "${!unique_domains[@]}"; do
+        if [ -f "/etc/letsencrypt/renewal/$domain.conf" ]; then
+            desired_hook="renew_hook = sh -c 'cd /opt/remnawave && docker compose down remnawave-nginx && docker compose up -d remnawave-nginx'"
+            if ! grep -q "renew_hook" "/etc/letsencrypt/renewal/$domain.conf"; then
+                echo "$desired_hook" >> "/etc/letsencrypt/renewal/$domain.conf"
+            elif ! grep -Fx "$desired_hook" "/etc/letsencrypt/renewal/$domain.conf"; then
+                sed -i "/renew_hook/c\\$desired_hook" "/etc/letsencrypt/renewal/$domain.conf"
+                echo -e "${YELLOW}Updating cron job to match certificate expiry.${NC}"
+            fi
+        fi
+    done
+}
+
+#=======================
+# API REQUEST FUNCTIONS
+#=======================
+
 make_api_request() {
     local method=$1
     local url=$2
@@ -946,7 +983,6 @@ make_api_request() {
     fi
 }
 
-
 register_remnawave() {
     local domain_url=$1
     local username=$2
@@ -957,11 +993,11 @@ register_remnawave() {
     local register_response=$(make_api_request "POST" "http://$domain_url/api/auth/register" "$token" "$register_data")
 
     if [ -z "$register_response" ]; then
-        echo -e "${COLOR_RED}${LANG[ERROR_EMPTY_RESPONSE_REGISTER]}${COLOR_RESET}"
+        echo -e "${RED}Registration error - empty server response${NC}"
     elif [[ "$register_response" == *"accessToken"* ]]; then
         echo "$register_response" | jq -r '.response.accessToken'
     else
-        echo -e "${COLOR_RED}${LANG[ERROR_REGISTER]}: $register_response${COLOR_RESET}"
+        echo -e "${RED}Registration error: $register_response${NC}"
     fi
 }
 
@@ -982,15 +1018,15 @@ get_panel_token() {
     
     if [ -f "$TOKEN_FILE" ]; then
         token=$(cat "$TOKEN_FILE")
-        echo -e "${COLOR_YELLOW}${LANG[USING_SAVED_TOKEN]}${COLOR_RESET}"
+        echo -e "${YELLOW}Using saved token...${NC}"
         local test_response=$(make_api_request "GET" "${domain_url}/api/config-profiles" "$token")
         
         if [ -z "$test_response" ] || ! echo "$test_response" | jq -e '.response.configProfiles' > /dev/null 2>&1; then
             if echo "$test_response" | grep -q '"statusCode":401' || \
                echo "$test_response" | jq -e '.message | test("Unauthorized")' > /dev/null 2>&1; then
-                echo -e "${COLOR_RED}${LANG[INVALID_SAVED_TOKEN]}${COLOR_RESET}"
+                echo -e "${RED}Saved token is invalid. Requesting a new one...${NC}"
             else
-                echo -e "${COLOR_RED}${LANG[INVALID_SAVED_TOKEN]}: $test_response${COLOR_RESET}"
+                echo -e "${RED}Saved token is invalid. Requesting a new one...: $test_response${NC}"
             fi
             token=""
         fi
@@ -998,42 +1034,45 @@ get_panel_token() {
     
     if [ -z "$token" ]; then
         if [ "$oauth_enabled" = true ]; then
-            echo -e "${COLOR_YELLOW}=================================================${COLOR_RESET}"
-            echo -e "${COLOR_RED}${LANG[WARNING_LABEL]}${COLOR_RESET}"
-            echo -e "${COLOR_YELLOW}${LANG[TELEGRAM_OAUTH_WARNING]}${COLOR_RESET}"
-            printf "${COLOR_YELLOW}${LANG[CREATE_API_TOKEN_INSTRUCTION]}${COLOR_RESET}\n" "$PANEL_DOMAIN"
-            reading "${LANG[ENTER_API_TOKEN]}" token
+            echo -e "${YELLOW}=================================================${NC}"
+            echo -e "${RED}WARNING:${NC}"
+            echo -e "${YELLOW}OAuth is enabled. Manual token creation required.${NC}"
+            printf "${YELLOW}Create API token in panel settings at https://%s and paste it below.${NC}\n" "$PANEL_DOMAIN"
+            echo -ne "${CYAN}Enter API token: ${NC}"
+            read token
             if [ -z "$token" ]; then
-                echo -e "${COLOR_RED}${LANG[EMPTY_TOKEN_ERROR]}${COLOR_RESET}"
+                echo -e "${RED}API token cannot be empty${NC}"
                 return 1
             fi
             
             local test_response=$(make_api_request "GET" "${domain_url}/api/config-profiles" "$token")
             if [ -z "$test_response" ] || ! echo "$test_response" | jq -e '.response.configProfiles' > /dev/null 2>&1; then
-                echo -e "${COLOR_RED}${LANG[INVALID_SAVED_TOKEN]}: $test_response${COLOR_RESET}"
+                echo -e "${RED}Saved token is invalid. Requesting a new one...: $test_response${NC}"
                 return 1
             fi
         else
-            reading "${LANG[ENTER_PANEL_USERNAME]}" username
-            reading "${LANG[ENTER_PANEL_PASSWORD]}" password
+            echo -ne "${CYAN}Enter panel username: ${NC}"
+            read username
+            echo -ne "${CYAN}Enter panel password: ${NC}"
+            read password
             
             local login_response=$(make_api_request "POST" "${domain_url}/api/auth/login" "" "{\"username\":\"$username\",\"password\":\"$password\"}")
             token=$(echo "$login_response" | jq -r '.response.accessToken // .accessToken // ""')
             if [ -z "$token" ] || [ "$token" == "null" ]; then
-                echo -e "${COLOR_RED}${LANG[ERROR_TOKEN]}: $login_response${COLOR_RESET}"
+                echo -e "${RED}Failed to get token.: $login_response${NC}"
                 return 1
             fi
         fi
         
         echo "$token" > "$TOKEN_FILE"
-        echo -e "${COLOR_GREEN}${LANG[TOKEN_RECEIVED_AND_SAVED]}${COLOR_RESET}"
+        echo -e "${GREEN}Token successfully received and saved${NC}"
     else
-        echo -e "${COLOR_GREEN}${LANG[TOKEN_USED_SUCCESSFULLY]}${COLOR_RESET}"
+        echo -e "${GREEN}Token successfully used${NC}"
     fi
     
     local final_test_response=$(make_api_request "GET" "${domain_url}/api/config-profiles" "$token")
     if [ -z "$final_test_response" ] || ! echo "$final_test_response" | jq -e '.response.configProfiles' > /dev/null 2>&1; then
-        echo -e "${COLOR_RED}${LANG[INVALID_SAVED_TOKEN]}: $final_test_response${COLOR_RESET}"
+        echo -e "${RED}Saved token is invalid. Requesting a new one...: $final_test_response${NC}"
         return 1
     fi
 }
@@ -1046,12 +1085,12 @@ get_public_key() {
     local api_response=$(make_api_request "GET" "http://$domain_url/api/keygen" "$token")
 
     if [ -z "$api_response" ]; then
-        echo -e "${COLOR_RED}${LANG[ERROR_PUBLIC_KEY]}${COLOR_RESET}"
+        echo -e "${RED}Failed to get public key.${NC}"
     fi
 
     local pubkey=$(echo "$api_response" | jq -r '.response.pubKey')
     if [ -z "$pubkey" ]; then
-        echo -e "${COLOR_RED}${LANG[ERROR_EXTRACT_PUBLIC_KEY]}${COLOR_RESET}"
+        echo -e "${RED}Failed to extract public key from response.${NC}"
     fi
 
     local env_node_file="$target_dir/.env-node"
@@ -1062,7 +1101,7 @@ APP_PORT=2222
 ### XRAY ###
 SSL_CERT="$pubkey"
 EOL
-    echo -e "${COLOR_YELLOW}${LANG[PUBLIC_KEY_SUCCESS]}${COLOR_RESET}"
+    echo -e "${YELLOW}Public key successfully obtained${NC}"
     echo "$pubkey"
 }
 
@@ -1073,19 +1112,19 @@ generate_xray_keys() {
     local api_response=$(make_api_request "GET" "http://$domain_url/api/system/tools/x25519/generate" "$token")
 
     if [ -z "$api_response" ]; then
-        echo -e "${COLOR_RED}${LANG[ERROR_GENERATE_KEYS]}${COLOR_RESET}"
+        echo -e "${RED}Failed to generate keys.${NC}"
         return 1
     fi
 
     if echo "$api_response" | jq -e '.errorCode' > /dev/null 2>&1; then
         local error_message=$(echo "$api_response" | jq -r '.message')
-        echo -e "${COLOR_RED}${LANG[ERROR_GENERATE_KEYS]}: $error_message${COLOR_RESET}"
+        echo -e "${RED}Failed to generate keys.: $error_message${NC}"
     fi
 
     local private_key=$(echo "$api_response" | jq -r '.response.keypairs[0].privateKey')
 
     if [ -z "$private_key" ] || [ "$private_key" = "null" ]; then
-        echo -e "${COLOR_RED}${LANG[ERROR_EXTRACT_PRIVATE_KEY]}${COLOR_RESET}"
+        echo -e "${RED}Failed to extract private key from response.${NC}"
     fi
 
     echo "$private_key"
@@ -1122,13 +1161,13 @@ EOF
     local node_response=$(make_api_request "POST" "http://$domain_url/api/nodes" "$token" "$node_data")
 
     if [ -z "$node_response" ]; then
-        echo -e "${COLOR_RED}${LANG[ERROR_EMPTY_RESPONSE_NODE]}${COLOR_RESET}"
+        echo -e "${RED}Empty response from server when creating node.${NC}"
     fi
 
     if echo "$node_response" | jq -e '.response.uuid' > /dev/null; then
-        printf "${COLOR_GREEN}${LANG[NODE_CREATED]}${COLOR_RESET}\n"
+        printf "${GREEN}Node successfully created${NC}\n"
     else
-        echo -e "${COLOR_RED}${LANG[ERROR_CREATE_NODE]}${COLOR_RESET}"
+        echo -e "${RED}Failed to create node.${NC}"
     fi
 }
 
@@ -1138,13 +1177,13 @@ get_config_profiles() {
 
     local config_response=$(make_api_request "GET" "http://$domain_url/api/config-profiles" "$token")
     if [ -z "$config_response" ] || ! echo "$config_response" | jq -e '.' > /dev/null 2>&1; then
-        echo -e "${COLOR_RED}${LANG[ERROR_NO_CONFIGS]}${COLOR_RESET}"
+        echo -e "${RED}No config profiles found${NC}"
         return 1
     fi
 
     local profile_uuid=$(echo "$config_response" | jq -r '.response.configProfiles[] | select(.name == "Default-Profile") | .uuid' 2>/dev/null)
     if [ -z "$profile_uuid" ]; then
-        echo -e "${COLOR_YELLOW}${LANG[NO_DEFAULT_PROFILE]}${COLOR_RESET}"
+        echo -e "${YELLOW}Default-Profile not found${NC}"
         return 0
     fi
 
@@ -1166,7 +1205,7 @@ delete_config_profile() {
 
     local delete_response=$(make_api_request "DELETE" "http://$domain_url/api/config-profiles/$profile_uuid" "$token")
     if [ -z "$delete_response" ] || ! echo "$delete_response" | jq -e '.' > /dev/null 2>&1; then
-        echo -e "${COLOR_RED}${LANG[ERROR_DELETE_PROFILE]}${COLOR_RESET}"
+        echo -e "${RED}Failed to delete profile${NC}"
         return 1
     fi
 
@@ -1226,13 +1265,13 @@ create_config_profile() {
 
     local response=$(make_api_request "POST" "http://$domain_url/api/config-profiles" "$token" "$request_body")
     if [ -z "$response" ] || ! echo "$response" | jq -e '.response.uuid' > /dev/null; then
-        echo -e "${COLOR_RED}${LANG[ERROR_CREATE_CONFIG_PROFILE]}: $response${COLOR_RESET}"
+        echo -e "${RED}Failed to create config profile: $response${NC}"
     fi
 
     local config_uuid=$(echo "$response" | jq -r '.response.uuid')
     local inbound_uuid=$(echo "$response" | jq -r '.response.inbounds[0].uuid')
     if [ -z "$config_uuid" ] || [ "$config_uuid" = "null" ] || [ -z "$inbound_uuid" ] || [ "$inbound_uuid" = "null" ]; then
-        echo -e "${COLOR_RED}${LANG[ERROR_CREATE_CONFIG_PROFILE]}: Invalid UUIDs in response: $response${COLOR_RESET}"
+        echo -e "${RED}Failed to create config profile: Invalid UUIDs in response: $response${NC}"
     fi
 
     echo "$config_uuid $inbound_uuid"
@@ -1267,13 +1306,13 @@ create_host() {
     local response=$(make_api_request "POST" "http://$domain_url/api/hosts" "$token" "$request_body")
 
     if [ -z "$response" ]; then
-        echo -e "${COLOR_RED}${LANG[ERROR_EMPTY_RESPONSE_HOST]}${COLOR_RESET}"
+        echo -e "${RED}Empty response from server when creating host.${NC}"
     fi
 
     if echo "$response" | jq -e '.response.uuid' > /dev/null; then
-        echo -e "${COLOR_GREEN}${LANG[HOST_CREATED]}${COLOR_RESET}"
+        echo -e "${GREEN}Host successfully created${NC}"
     else
-        echo -e "${COLOR_RED}${LANG[ERROR_CREATE_HOST]}${COLOR_RESET}"
+        echo -e "${RED}Failed to create host.${NC}"
     fi
 }
 
@@ -1283,13 +1322,13 @@ get_default_squad() {
 
     local response=$(make_api_request "GET" "http://$domain_url/api/internal-squads" "$token")
     if [ -z "$response" ] || ! echo "$response" | jq -e '.response.internalSquads' > /dev/null 2>&1; then
-        echo -e "${COLOR_RED}${LANG[ERROR_GET_SQUAD]}: $response${COLOR_RESET}"
+        echo -e "${RED}Failed to get squad: $response${NC}"
         return 1
     fi
 
     local squad_uuids=$(echo "$response" | jq -r '.response.internalSquads[].uuid' 2>/dev/null)
     if [ -z "$squad_uuids" ]; then
-        echo -e "${COLOR_YELLOW}${LANG[NO_SQUADS_FOUND]}${COLOR_RESET}"
+        echo -e "${YELLOW}No squads found${NC}"
         return 0
     fi
 
@@ -1301,12 +1340,12 @@ get_default_squad() {
         if [[ $uuid =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]]; then
             valid_uuids+="$uuid\n"
         else
-            echo -e "${COLOR_RED}${LANG[INVALID_UUID_FORMAT]}: $uuid${COLOR_RESET}"
+            echo -e "${RED}Invalid UUID format: $uuid${NC}"
         fi
     done <<< "$squad_uuids"
 
     if [ -z "$valid_uuids" ]; then
-        echo -e "${COLOR_YELLOW}${LANG[NO_VALID_SQUADS_FOUND]}${COLOR_RESET}"
+        echo -e "${YELLOW}No valid squads found${NC}"
         return 0
     fi
 
@@ -1321,18 +1360,18 @@ update_squad() {
     local inbound_uuid=$4
 
     if [[ ! $squad_uuid =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]]; then
-        echo -e "${COLOR_RED}${LANG[INVALID_SQUAD_UUID]}: $squad_uuid${COLOR_RESET}"
+        echo -e "${RED}Invalid squad UUID: $squad_uuid${NC}"
         return 1
     fi
 
     if [[ ! $inbound_uuid =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]]; then
-        echo -e "${COLOR_RED}${LANG[INVALID_INBOUND_UUID]}: $inbound_uuid${COLOR_RESET}"
+        echo -e "${RED}Invalid inbound UUID: $inbound_uuid${NC}"
         return 1
     fi
 
     local squad_response=$(make_api_request "GET" "http://$domain_url/api/internal-squads" "$token")
     if [ -z "$squad_response" ] || ! echo "$squad_response" | jq -e '.response.internalSquads' > /dev/null 2>&1; then
-        echo -e "${COLOR_RED}${LANG[ERROR_GET_SQUAD]}: $squad_response${COLOR_RESET}"
+        echo -e "${RED}Failed to get squad: $squad_response${NC}"
         return 1
     fi
 
@@ -1352,137 +1391,157 @@ update_squad() {
 
     local response=$(make_api_request "PATCH" "http://$domain_url/api/internal-squads" "$token" "$request_body")
     if [ -z "$response" ] || ! echo "$response" | jq -e '.response.uuid' > /dev/null 2>&1; then
-        echo -e "${COLOR_RED}${LANG[ERROR_UPDATE_SQUAD]}: $response${COLOR_RESET}"
+        echo -e "${RED}Failed to update squad: $response${NC}"
         return 1
     fi
 
     return 0
 }
 
-### API Functions ###
+#===============================
+# TEMPLATE MANAGEMENT FUNCTIONS
+#===============================
 
-handle_certificates() {
-    local -n domains_to_check_ref=$1
-    local cert_method="$2"
-    local letsencrypt_email="$3"
-    local target_dir="/opt/remnawave"
+randomhtml() {
+    local template_source="$1"
 
-    declare -A unique_domains
-    local need_certificates=false
-    local min_days_left=9999
+    cd /opt/ || { echo "Error unpacking archive"; exit 1; }
 
-    echo -e "${COLOR_YELLOW}${LANG[CHECK_CERTS]}${COLOR_RESET}"
+    rm -f main.zip 2>/dev/null
+    rm -rf simple-web-templates-main/ sni-templates-main/ 2>/dev/null
+
+    echo -e "${YELLOW}Installing random template for camouflage site${NC}"
     sleep 1
+    spinner $$ "Please wait..." &
+    spinner_pid=$!
 
-    echo -e "${COLOR_YELLOW}${LANG[REQUIRED_DOMAINS]}${COLOR_RESET}"
-    for domain in "${!domains_to_check_ref[@]}"; do
-        echo -e "${COLOR_WHITE}- $domain${COLOR_RESET}"
-    done
+    template_urls=(
+        "https://github.com/eGamesAPI/simple-web-templates/archive/refs/heads/main.zip"
+        "https://github.com/SmallPoppa/sni-templates/archive/refs/heads/main.zip"
+    )
 
-    for domain in "${!domains_to_check_ref[@]}"; do
-        if ! check_certificates "$domain"; then
-            need_certificates=true
+    if [ -z "$template_source" ]; then
+        selected_url=${template_urls[$RANDOM % ${#template_urls[@]}]}
+    else
+        if [ "$template_source" = "simple" ]; then
+            selected_url=${template_urls[0]}  # Simple web templates
         else
-            days_left=$(check_cert_expiry "$domain")
-            if [ $? -eq 0 ] && [ "$days_left" -lt "$min_days_left" ]; then
-                min_days_left=$days_left
-            fi
+            selected_url=${template_urls[1]}  # Sni templates
         fi
+    fi
+
+    while ! wget -q --timeout=30 --tries=10 --retry-connrefused "$selected_url"; do
+        echo "Download failed, retrying..."
+        sleep 3
     done
 
-    if [ "$need_certificates" = true ]; then
-        cert_method="1"
+    unzip -o main.zip &>/dev/null || { echo "Error unpacking archive"; exit 0; }
+    rm -f main.zip
+
+    if [[ "$selected_url" == *"eGamesAPI"* ]]; then
+        cd simple-web-templates-main/ || { echo "Error unpacking archive"; exit 0; }
+        rm -rf assets ".gitattributes" "README.md" "_config.yml" 2>/dev/null
     else
-        echo -e "${COLOR_GREEN}${LANG[CERTS_SKIPPED]}${COLOR_RESET}"
-        cert_method="1"
+        cd sni-templates-main/ || { echo "Error unpacking archive"; exit 0; }
+        rm -rf assets "README.md" "index.html" 2>/dev/null
     fi
 
-    declare -A cert_domains_added
-    if [ "$need_certificates" = true ] && [ "$cert_method" == "1" ]; then
-        for domain in "${!domains_to_check_ref[@]}"; do
-            local base_domain=$(extract_domain "$domain")
-            unique_domains["$base_domain"]="1"
-        done
+    mapfile -t templates < <(find . -maxdepth 1 -type d -not -path . | sed 's|./||')
 
-        for domain in "${!unique_domains[@]}"; do
-            get_certificates "$domain" "$cert_method" ""
-            if [ $? -ne 0 ]; then
-                echo -e "${COLOR_RED}${LANG[CERT_GENERATION_FAILED]} $domain${COLOR_RESET}"
-                return 1
-            fi
-            min_days_left=90
-            if [ -z "${cert_domains_added[$domain]}" ]; then
-                echo "      - /etc/letsencrypt/live/$domain/fullchain.pem:/etc/nginx/ssl/$domain/fullchain.pem:ro" >> "$target_dir/docker-compose.yml"
-                echo "      - /etc/letsencrypt/live/$domain/privkey.pem:/etc/nginx/ssl/$domain/privkey.pem:ro" >> "$target_dir/docker-compose.yml"
-                cert_domains_added["$domain"]="1"
-            fi
-        done
-    else
-        for domain in "${!domains_to_check_ref[@]}"; do
-            local base_domain=$(extract_domain "$domain")
-            local cert_domain="$domain"
-            if [ -d "/etc/letsencrypt/live/$base_domain" ] && is_wildcard_cert "$base_domain"; then
-                cert_domain="$base_domain"
-            fi
-            if [ -z "${cert_domains_added[$cert_domain]}" ]; then
-                echo "      - /etc/letsencrypt/live/$cert_domain/fullchain.pem:/etc/nginx/ssl/$cert_domain/fullchain.pem:ro" >> "$target_dir/docker-compose.yml"
-                echo "      - /etc/letsencrypt/live/$cert_domain/privkey.pem:/etc/nginx/ssl/$cert_domain/privkey.pem:ro" >> "$target_dir/docker-compose.yml"
-                cert_domains_added["$cert_domain"]="1"
-            fi
-        done
+    RandomHTML="${templates[$RANDOM % ${#templates[@]}]}"
+
+    if [[ "$selected_url" == *"SmallPoppa"* && "$RandomHTML" == "503 error pages" ]]; then
+        cd "$RandomHTML" || { echo "Error unpacking archive"; exit 0; }
+        versions=("v1" "v2")
+        RandomVersion="${versions[$RANDOM % ${#versions[@]}]}"
+        RandomHTML="$RandomHTML/$RandomVersion"
+        cd ..
     fi
 
-    local cron_command="/usr/bin/certbot renew --quiet"
+    local random_meta_id=$(openssl rand -hex 16)
+    local random_comment=$(openssl rand -hex 8)
+    local random_class_suffix=$(openssl rand -hex 4)
+    local random_title_prefix="Page_"
+    local random_title_suffix=$(openssl rand -hex 4)
+    local random_footer_text="Designed by RandomSite_${random_title_suffix}"
+    local random_id_suffix=$(openssl rand -hex 4)
 
-    if ! crontab -u root -l 2>/dev/null | grep -q "/usr/bin/certbot renew"; then
-        echo -e "${COLOR_YELLOW}${LANG[ADDING_CRON_FOR_EXISTING_CERTS]}${COLOR_RESET}"
-        if [ "$min_days_left" -le 30 ]; then
-            echo -e "${COLOR_YELLOW}${LANG[CERT_EXPIRY_SOON]} $min_days_left ${LANG[DAYS]}${COLOR_RESET}"
-            add_cron_rule "0 5 * * * $cron_command"
-        else
-            add_cron_rule "0 5 1 */2 * $cron_command"
+    local meta_names=("viewport-id" "session-id" "track-id" "render-id" "page-id" "config-id")
+    local random_meta_name=${meta_names[$RANDOM % ${#meta_names[@]}]}
+
+    local class_prefixes=("style" "data" "ui" "layout" "theme" "view")
+    local random_class_prefix=${class_prefixes[$RANDOM % ${#class_prefixes[@]}]}
+    local random_class="$random_class_prefix-$random_class_suffix"
+    local random_title="${random_title_prefix}${random_title_suffix}"
+
+    find "./$RandomHTML" -type f -name "*.html" -exec sed -i \
+        -e "s|<!-- Website template by freewebsitetemplates.com -->||" \
+        -e "s|<!-- Theme by: WebThemez.com -->||" \
+        -e "s|<a href=\"http://freewebsitetemplates.com\">Free Website Templates</a>|<span>${random_footer_text}</span>|" \
+        -e "s|<a href=\"http://webthemez.com\" alt=\"webthemez\">WebThemez.com</a>|<span>${random_footer_text}</span>|" \
+        -e "s|id=\"Content\"|id=\"rnd_${random_id_suffix}\"|" \
+        -e "s|id=\"subscribe\"|id=\"sub_${random_id_suffix}\"|" \
+        -e "s|<title>.*</title>|<title>${random_title}</title>|" \
+        -e "s/<\/head>/<meta name=\"$random_meta_name\" content=\"$random_meta_id\">\n<!-- $random_comment -->\n<\/head>/" \
+        -e "s/<body/<body class=\"$random_class\"/" \
+        {} \;
+
+    find "./$RandomHTML" -type f -name "*.css" -exec sed -i \
+        -e "1i\/* $random_comment */" \
+        -e "1i.$random_class { display: block; }" \
+        {} \;
+
+    kill "$spinner_pid" 2>/dev/null
+    wait "$spinner_pid" 2>/dev/null
+    printf "\r\033[K" > /dev/tty
+
+    echo "Selected template:" "${RandomHTML}"
+
+    if [[ -d "${RandomHTML}" ]]; then
+        if [[ ! -d "/var/www/html/" ]]; then
+            mkdir -p "/var/www/html/" || { echo "Failed to create /var/www/html/"; exit 1; }
         fi
+        rm -rf /var/www/html/*
+        cp -a "${RandomHTML}"/. "/var/www/html/"
+        echo "Template copied to /var/www/html/"
     else
-        echo -e "${COLOR_YELLOW}${LANG[CRON_ALREADY_EXISTS]}${COLOR_RESET}"
+        echo "Error unpacking archive" && exit 1
     fi
 
-    for domain in "${!unique_domains[@]}"; do
-        if [ -f "/etc/letsencrypt/renewal/$domain.conf" ]; then
-            desired_hook="renew_hook = sh -c 'cd /opt/remnawave && docker compose down remnawave-nginx && docker compose up -d remnawave-nginx'"
-            if ! grep -q "renew_hook" "/etc/letsencrypt/renewal/$domain.conf"; then
-                echo "$desired_hook" >> "/etc/letsencrypt/renewal/$domain.conf"
-            elif ! grep -Fx "$desired_hook" "/etc/letsencrypt/renewal/$domain.conf"; then
-                sed -i "/renew_hook/c\\$desired_hook" "/etc/letsencrypt/renewal/$domain.conf"
-                echo -e "${COLOR_YELLOW}${LANG[UPDATED_RENEW_AUTH]}${COLOR_RESET}"
-            fi
-        fi
-    done
+    if ! find "/var/www/html" -type f -name "*.html" -exec grep -q "$random_meta_name" {} \; 2>/dev/null; then
+        echo -e "${RED}Failed to modify HTML files${NC}"
+        return 1
+    fi
+
+    cd /opt/
+    rm -rf simple-web-templates-main/ sni-templates-main/
 }
 
-#Install Panel
+#==============================
+# PANEL INSTALLATION FUNCTIONS
+#==============================
+
 install_remnawave_panel() {
+    source /opt/remnawave/remnawave-vars.sh
+    
     mkdir -p /opt/remnawave && cd /opt/remnawave
 
-    reading "${LANG[ENTER_PANEL_DOMAIN]}" PANEL_DOMAIN
     check_domain "$PANEL_DOMAIN" true true
     local panel_check_result=$?
     if [ $panel_check_result -eq 2 ]; then
-        echo -e "${COLOR_RED}${LANG[ABORT_MESSAGE]}${COLOR_RESET}"
+        echo -e "${RED}Installation aborted by user${NC}"
         exit 1
     fi
 
-    reading "${LANG[ENTER_SUB_DOMAIN]}" SUB_DOMAIN
     check_domain "$SUB_DOMAIN" true true
     local sub_check_result=$?
     if [ $sub_check_result -eq 2 ]; then
-        echo -e "${COLOR_RED}${LANG[ABORT_MESSAGE]}${COLOR_RESET}"
+        echo -e "${RED}Installation aborted by user${NC}"
         exit 1
     fi
 
-    reading "${LANG[ENTER_NODE_DOMAIN]}" SELFSTEAL_DOMAIN
-
     if [ "$PANEL_DOMAIN" = "$SUB_DOMAIN" ] || [ "$PANEL_DOMAIN" = "$SELFSTEAL_DOMAIN" ] || [ "$SUB_DOMAIN" = "$SELFSTEAL_DOMAIN" ]; then
-        echo -e "${COLOR_RED}${LANG[DOMAINS_MUST_BE_UNIQUE]}${COLOR_RESET}"
+        echo -e "${RED}Error: All domains (panel, subscription, and node) must be unique.${NC}"
         exit 1
     fi
 
@@ -1492,31 +1551,13 @@ install_remnawave_panel() {
     unique_domains["$PANEL_BASE_DOMAIN"]=1
     unique_domains["$SUB_BASE_DOMAIN"]=1
 
-    SUPERADMIN_USERNAME=$(generate_user)
-    SUPERADMIN_PASSWORD=$(generate_password)
-
-    cookies_random1=$(generate_user)
-    cookies_random2=$(generate_user)
-
-    METRICS_USER=$(generate_user)
-    METRICS_PASS=$(generate_user)
-
-    JWT_AUTH_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 64)
-    JWT_API_TOKENS_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 64)
-
+    # Создание .env файла (переменные уже сгенерированы в main())
     cat > .env <<EOL
 ### APP ###
 APP_PORT=3000
 METRICS_PORT=3001
 
-### API ###
-# Possible values: max (start instances on all cores), number (start instances on number of cores), -1 (start instances on all cores - 1)
-# !!! Do not set this value more than physical cores count in your machine !!!
-# Review documentation: https://remna.st/docs/install/environment-variables#scaling-api
-API_INSTANCES=1
-
 ### DATABASE ###
-# FORMAT: postgresql://{user}:{password}@{host}:{port}/{database}
 DATABASE_URL="postgresql://postgres:postgres@remnawave-db:5432/postgres"
 
 ### REDIS ###
@@ -1526,109 +1567,19 @@ REDIS_PORT=6379
 ### JWT ###
 JWT_AUTH_SECRET=$JWT_AUTH_SECRET
 JWT_API_TOKENS_SECRET=$JWT_API_TOKENS_SECRET
-
-# Set the session idle timeout in the panel to avoid daily logins.
-# Value in hours: 12–168
 JWT_AUTH_LIFETIME=168
 
-### TELEGRAM NOTIFICATIONS ###
-IS_TELEGRAM_NOTIFICATIONS_ENABLED=false
-TELEGRAM_BOT_TOKEN=change_me
-TELEGRAM_NOTIFY_USERS_CHAT_ID=change_me
-TELEGRAM_NOTIFY_NODES_CHAT_ID=change_me
-
-### Telegram Oauth (Login with Telegram)
-### Docs https://remna.st/docs/features/telegram-oauth
-### true/false
-TELEGRAM_OAUTH_ENABLED=false
-### Array of Admin Chat Ids. These ids will be allowed to login.
-TELEGRAM_OAUTH_ADMIN_IDS=[123, 321]
-
-# Optional
-# Only set if you want to use topics
-TELEGRAM_NOTIFY_USERS_THREAD_ID=
-TELEGRAM_NOTIFY_NODES_THREAD_ID=
-TELEGRAM_NOTIFY_CRM_THREAD_ID=
-
-# Enable Github OAuth2, possible values: true, false
-OAUTH2_GITHUB_ENABLED=false
-# Github client ID, you can get it from Github application settings
-OAUTH2_GITHUB_CLIENT_ID="REPLACE_WITH_YOUR_CLIENT_ID"
-# Github client secret, you can get it from Github application settings
-OAUTH2_GITHUB_CLIENT_SECRET="REPLACE_WITH_YOUR_CLIENT_SECRET"
-# List of allowed emails, separated by commas
-OAUTH2_GITHUB_ALLOWED_EMAILS=["admin@example.com", "user@example.com"]
-
-# Enable PocketID OAuth2, possible values: true, false
-OAUTH2_POCKETID_ENABLED=false
-# PocketID Client ID, you can get it from OIDC Client settings
-OAUTH2_POCKETID_CLIENT_ID="REPLACE_WITH_YOUR_CLIENT_ID"
-# PocketID Client Secret, you can get it from OIDC Client settings
-OAUTH2_POCKETID_CLIENT_SECRET="REPLACE_WITH_YOUR_CLIENT_SECRET"
-# Plain domain where PocketID is hosted, do not place any paths here. Just plain domain.
-OAUTH2_POCKETID_PLAIN_DOMAIN="pocketid.domain.com"
-# List of allowed emails, separated by commas
-OAUTH2_POCKETID_ALLOWED_EMAILS=["admin@example.com", "user@example.com"]
-
-# Enable Yandex OAuth2, possible values: true, false
-OAUTH2_YANDEX_ENABLED=false
-# Yandex Client ID, you can get it from OIDC Client settings
-OAUTH2_YANDEX_CLIENT_ID="REPLACE_WITH_YOUR_CLIENT_ID"
-# Yandex Client Secret, you can get it from OIDC Client settings
-OAUTH2_YANDEX_CLIENT_SECRET="REPLACE_WITH_YOUR_CLIENT_SECRET"
-# List of allowed emails, separated by commas
-OAUTH2_YANDEX_ALLOWED_EMAILS=["admin@example.com", "user@example.com"]
-
 ### FRONT_END ###
-# Used by CORS, you can leave it as * or place your domain there
 FRONT_END_DOMAIN=$PANEL_DOMAIN
 
 ### SUBSCRIPTION PUBLIC DOMAIN ###
-### DOMAIN, WITHOUT HTTP/HTTPS, DO NOT ADD / AT THE END ###
-### Used in "profile-web-page-url" response header and in UI/API ###
-### Review documentation: https://remna.st/docs/install/environment-variables#domains
 SUB_PUBLIC_DOMAIN=$SUB_DOMAIN
 
-### If CUSTOM_SUB_PREFIX is set in @remnawave/subscription-page, append the same path to SUB_PUBLIC_DOMAIN. Example: SUB_PUBLIC_DOMAIN=sub-page.example.com/sub ###
-
-### SWAGGER ###
-SWAGGER_PATH=/docs
-SCALAR_PATH=/scalar
-IS_DOCS_ENABLED=true
-
 ### PROMETHEUS ###
-### Metrics are available at /api/metrics
 METRICS_USER=$METRICS_USER
 METRICS_PASS=$METRICS_PASS
 
-### WEBHOOK ###
-WEBHOOK_ENABLED=false
-### Only https:// is allowed
-WEBHOOK_URL=https://webhook.site/1234567890
-### This secret is used to sign the webhook payload, must be exact 64 characters. Only a-z, 0-9, A-Z are allowed.
-WEBHOOK_SECRET_HEADER=vsmu67Kmg6R8FjIOF1WUY8LWBHie4scdEqrfsKmyf4IAf8dY3nFS0wwYHkhh6ZvQ
-
-### HWID DEVICE DETECTION AND LIMITATION ###
-# Don't enable this if you don't know what you are doing.
-# Review documentation before enabling this feature.
-# https://remna.st/docs/features/hwid-device-limit/
-HWID_DEVICE_LIMIT_ENABLED=false
-HWID_FALLBACK_DEVICE_LIMIT=5
-HWID_MAX_DEVICES_ANNOUNCE="You have reached the maximum number of devices for your subscription."
-
-### Bandwidth usage reached notifications
-BANDWIDTH_USAGE_NOTIFICATIONS_ENABLED=false
-# Only in ASC order (example: [60, 80]), must be valid array of integer(min: 25, max: 95) numbers. No more than 5 values.
-BANDWIDTH_USAGE_NOTIFICATIONS_THRESHOLD=[60, 80]
-
-### CLOUDFLARE ###
-# USED ONLY FOR docker-compose-prod-with-cf.yml
-# NOT USED BY THE APP ITSELF
-CLOUDFLARE_TOKEN=ey...
-
 ### Database ###
-### For Postgres Docker container ###
-# NOT USED BY THE APP ITSELF
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_DB=postgres
@@ -1724,7 +1675,7 @@ EOL
 }
 
 installation_panel() {
-    echo -e "${COLOR_YELLOW}${LANG[INSTALLING_PANEL]}${COLOR_RESET}"
+    echo -e "${YELLOW}Installing panel${NC}"
     sleep 1
 
     declare -A unique_domains
@@ -1755,6 +1706,8 @@ installation_panel() {
         SUB_CERT_DOMAIN="$SUB_DOMAIN"
     fi
 
+    echo -e "${CYAN}${INFO}${NC} Creating Docker Compose configuration..."
+    echo -e "${GRAY}  ${ARROW}${NC} Adding subscription page service"
     cat >> /opt/remnawave/docker-compose.yml <<EOL
     network_mode: host
     depends_on:
@@ -1803,6 +1756,8 @@ volumes:
     name: remnawave-redis-data
 EOL
 
+    echo -e "${CYAN}${INFO}${NC} Creating Nginx configuration..."
+    echo -e "${GRAY}  ${ARROW}${NC} Configuring SSL and proxy settings"
     cat > /opt/remnawave/nginx.conf <<EOL
 upstream remnawave {
     server 127.0.0.1:3000;
@@ -1912,126 +1867,96 @@ server {
 }
 EOL
 
-    echo -e "${COLOR_YELLOW}${LANG[STARTING_PANEL]}${COLOR_RESET}"
-    sleep 1
+    echo -e "${CYAN}${INFO}${NC} Starting Docker containers..."
+    echo -e "${GRAY}  ${ARROW}${NC} Launching services"
     cd /opt/remnawave
     docker compose up -d > /dev/null 2>&1 &
 
-    spinner $! "${LANG[WAITING]}"
+    spinner $! "Please wait..."
 
-    echo -e "${COLOR_YELLOW}${LANG[REGISTERING_REMNAWAVE]}${COLOR_RESET}"
+    echo -e "${CYAN}${INFO}${NC} Registering Remnawave..."
     sleep 20
 
     local domain_url="127.0.0.1:3000"
-    echo -e "${COLOR_YELLOW}${LANG[CHECK_CONTAINERS]}${COLOR_RESET}"
+    echo -e "${GRAY}  ${ARROW}${NC} Checking containers availability"
     until curl -s "http://$domain_url/api/auth/register" \
         --header 'X-Forwarded-For: 127.0.0.1' \
         --header 'X-Forwarded-Proto: https' \
         > /dev/null; do
-        echo -e "${COLOR_RED}${LANG[CONTAINERS_NOT_READY]}${COLOR_RESET}"
+        echo -e "${GRAY}  ${ARROW}${NC} Containers are not ready, waiting..."
         sleep 5
     done
 
     # Register Remnawave
+    echo -e "${GRAY}  ${ARROW}${NC} Creating admin user"
     local token=$(register_remnawave "$domain_url" "$SUPERADMIN_USERNAME" "$SUPERADMIN_PASSWORD")
-    echo -e "${COLOR_GREEN}${LANG[REGISTRATION_SUCCESS]}${COLOR_RESET}"
+    echo -e "${GREEN}${CHECK}${NC} Registration completed successfully!"
 
     # Generate Xray keys
-    echo -e "${COLOR_YELLOW}${LANG[GENERATE_KEYS]}${COLOR_RESET}"
+    echo -e "${CYAN}${INFO}${NC} Generating x25519 keys..."
     sleep 1
     local private_key=$(generate_xray_keys "$domain_url" "$token")
-    printf "${COLOR_GREEN}${LANG[GENERATE_KEYS_SUCCESS]}${COLOR_RESET}\n"
+    echo -e "${GREEN}${CHECK}${NC} Keys successfully generated"
 
     # Delete default config profile
     delete_config_profile "$domain_url" "$token"
 
     # Create config profile
-    echo -e "${COLOR_YELLOW}${LANG[CREATING_CONFIG_PROFILE]}${COLOR_RESET}"
+    echo -e "${CYAN}${INFO}${NC} Creating config profile..."
     read config_profile_uuid inbound_uuid <<< $(create_config_profile "$domain_url" "$token" "StealConfig" "$SELFSTEAL_DOMAIN" "$private_key")
-    echo -e "${COLOR_GREEN}${LANG[CONFIG_PROFILE_CREATED]}${COLOR_RESET}"
+    echo -e "${GREEN}${CHECK}${NC} Config profile successfully created"
 
     # Create node with config profile binding
-    echo -e "${COLOR_YELLOW}${LANG[CREATING_NODE]}${COLOR_RESET}"
+    echo -e "${CYAN}${INFO}${NC} Creating node..."
     create_node "$domain_url" "$token" "$config_profile_uuid" "$inbound_uuid" "$SELFSTEAL_DOMAIN"
 
     # Create host
-    echo -e "${COLOR_YELLOW}${LANG[CREATE_HOST]}${COLOR_RESET}"
+    echo -e "${CYAN}${INFO}${NC} Creating host..."
     create_host "$domain_url" "$token" "$inbound_uuid" "$SELFSTEAL_DOMAIN" "$config_profile_uuid"
 
     # Get UUID default squad
-    echo -e "${COLOR_YELLOW}${LANG[GET_DEFAULT_SQUAD]}${COLOR_RESET}"
+    echo -e "${CYAN}${INFO}${NC} Getting default squad..."
     local squad_uuid=$(get_default_squad "$domain_url" "$token")
 
     # Update squad
     update_squad "$domain_url" "$token" "$squad_uuid" "$inbound_uuid"
-    echo -e "${COLOR_GREEN}${LANG[UPDATE_SQUAD]}${COLOR_RESET}"
+    echo -e "${GREEN}${CHECK}${NC} Squad successfully updated"
 
-    clear
-
-    echo -e "${COLOR_YELLOW}=================================================${COLOR_RESET}"
-    echo -e "${COLOR_GREEN}${LANG[INSTALL_COMPLETE]}${COLOR_RESET}"
-    echo -e "${COLOR_YELLOW}=================================================${COLOR_RESET}"
-    echo -e "${COLOR_YELLOW}${LANG[PANEL_ACCESS]}${COLOR_RESET}"
-    echo -e "${COLOR_WHITE}https://${PANEL_DOMAIN}/auth/login?${cookies_random1}=${cookies_random2}${COLOR_RESET}"
-    echo -e "${COLOR_YELLOW}-------------------------------------------------${COLOR_RESET}"
-    echo -e "${COLOR_YELLOW}${LANG[ADMIN_CREDS]}${COLOR_RESET}"
-    echo -e "${COLOR_YELLOW}${LANG[USERNAME]} ${COLOR_WHITE}$SUPERADMIN_USERNAME${COLOR_RESET}"
-    echo -e "${COLOR_YELLOW}${LANG[PASSWORD]} ${COLOR_WHITE}$SUPERADMIN_PASSWORD${COLOR_RESET}"
-    echo -e "${COLOR_YELLOW}-------------------------------------------------${COLOR_RESET}"
-    echo -e "${COLOR_YELLOW}${LANG[RELAUNCH_CMD]}${COLOR_RESET}"
-    echo -e "${COLOR_GREEN}remnawave_reverse${COLOR_RESET}"
-    echo -e "${COLOR_YELLOW}=================================================${COLOR_RESET}"
-    echo -e "${COLOR_RED}${LANG[POST_PANEL_INSTRUCTION]}${COLOR_RESET}"
+    # Display completion info
+    echo
+    echo -e "${PURPLE}=================================================${NC}"
+    echo -e "${GREEN}               INSTALLATION COMPLETE!${NC}"
+    echo -e "${PURPLE}=================================================${NC}"
+    echo -e "${CYAN}Panel URL:${NC}"
+    echo -e "${WHITE}https://${PANEL_DOMAIN}/auth/login?${cookies_random1}=${cookies_random2}${NC}"
+    echo -e "${CYAN}-------------------------------------------------${NC}"
+    echo -e "${CYAN}To log into the panel, use the following data:${NC}"
+    echo -e "${CYAN}Username:${NC} ${WHITE}$SUPERADMIN_USERNAME${NC}"
+    echo -e "${CYAN}Password:${NC} ${WHITE}$SUPERADMIN_PASSWORD${NC}"
+    echo -e "${CYAN}-------------------------------------------------${NC}"
+    echo -e "${CYAN}To relaunch the manager, use the following command:${NC}"
+    echo -e "${GREEN}remnawave_reverse${NC}"
+    echo -e "${PURPLE}=================================================${NC}"
+    echo -e "${RED}To install the node, follow these steps:${NC}"
+    echo -e "${RED}1. Run this script on the server where the node will be installed.${NC}"
+    echo -e "${RED}2. Select 'Install Remnawave Components', then 'Install only the node'.${NC}"
 }
-#Install Panel
 
-#Install Node
+#=============================
+# NODE INSTALLATION FUNCTIONS
+#=============================
+
 install_remnawave_node() {
     mkdir -p /opt/remnawave && cd /opt/remnawave
-
-    reading "${LANG[SELFSTEAL]}" SELFSTEAL_DOMAIN
 
     check_domain "$SELFSTEAL_DOMAIN" true false
     local domain_check_result=$?
     if [ $domain_check_result -eq 2 ]; then
-        echo -e "${COLOR_RED}${LANG[ABORT_MESSAGE]}${COLOR_RESET}"
+        echo -e "${RED}Installation aborted by user${NC}"
         exit 1
     fi
 
-    while true; do
-        reading "${LANG[PANEL_IP_PROMPT]}" PANEL_IP
-        if echo "$PANEL_IP" | grep -E '^([0-9]{1,3}\.){3}[0-9]{1,3}$' >/dev/null && \
-           [[ $(echo "$PANEL_IP" | tr '.' '\n' | wc -l) -eq 4 ]] && \
-           [[ ! $(echo "$PANEL_IP" | tr '.' '\n' | grep -vE '^[0-9]{1,3}$') ]] && \
-           [[ ! $(echo "$PANEL_IP" | tr '.' '\n' | grep -E '^(25[6-9]|2[6-9][0-9]|[3-9][0-9]{2})$') ]]; then
-            break
-        else
-            echo -e "${COLOR_RED}${LANG[IP_ERROR]}${COLOR_RESET}"
-        fi
-    done
-
-    echo -n "$(question "${LANG[CERT_PROMPT]}")"
-    CERTIFICATE=""
-    while IFS= read -r line; do
-        if [ -z "$line" ]; then
-            if [ -n "$CERTIFICATE" ]; then
-                break
-            fi
-        else
-            CERTIFICATE="$CERTIFICATE$line\n"
-        fi
-    done
-
-    echo -e "${COLOR_YELLOW}${LANG[CERT_CONFIRM]}${COLOR_RESET}"
-    read confirm
-    echo
-
-    if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
-        echo -e "${COLOR_RED}${LANG[ABORT_MESSAGE]}${COLOR_RESET}"
-        exit 1
-    fi
-
-cat > .env-node <<EOL
+    cat > .env-node <<EOL
 ### APP ###
 APP_PORT=2222
 
@@ -2039,11 +1964,10 @@ APP_PORT=2222
 $(echo -e "$CERTIFICATE" | sed 's/\\n$//')
 EOL
 
-SELFSTEAL_BASE_DOMAIN=$(extract_domain "$SELFSTEAL_DOMAIN")
+    SELFSTEAL_BASE_DOMAIN=$(extract_domain "$SELFSTEAL_DOMAIN")
+    unique_domains["$SELFSTEAL_BASE_DOMAIN"]=1
 
-unique_domains["$SELFSTEAL_BASE_DOMAIN"]=1
-
-cat > docker-compose.yml <<EOL
+    cat > docker-compose.yml <<EOL
 services:
   remnawave-nginx:
     image: nginx:1.28
@@ -2056,7 +1980,7 @@ EOL
 }
 
 installation_node() {
-    echo -e "${COLOR_YELLOW}${LANG[INSTALLING_NODE]}${COLOR_RESET}"
+    echo -e "${YELLOW}Installing node${NC}"
     sleep 1
 
     declare -A unique_domains
@@ -2083,6 +2007,8 @@ installation_node() {
         NODE_CERT_DOMAIN="$SELFSTEAL_DOMAIN"
     fi
 
+    echo -e "${CYAN}${INFO}${NC} Completing Docker Compose configuration..."
+    echo -e "${GRAY}  ${ARROW}${NC} Adding node services"
     cat >> /opt/remnawave/docker-compose.yml <<EOL
       - /dev/shm:/dev/shm:rw
       - /var/www/html:/var/www/html:ro
@@ -2114,7 +2040,9 @@ installation_node() {
         max-file: '5'
 EOL
 
-cat > /opt/remnawave/nginx.conf <<EOL
+    echo -e "${CYAN}${INFO}${NC} Creating Nginx configuration for node..."
+    echo -e "${GRAY}  ${ARROW}${NC} Configuring SSL and Unix socket"
+    cat > /opt/remnawave/nginx.conf <<EOL
 map \$http_upgrade \$connection_upgrade {
     default upgrade;
     ""      close;
@@ -2149,138 +2077,204 @@ server {
 }
 EOL
 
+    echo -e "${CYAN}${INFO}${NC} Configuring firewall rules..."
+    echo -e "${GRAY}  ${ARROW}${NC} Allowing panel IP access to node port"
     ufw allow from $PANEL_IP to any port 2222 > /dev/null 2>&1
     ufw reload > /dev/null 2>&1
 
-    echo -e "${COLOR_YELLOW}${LANG[STARTING_NODE]}${COLOR_RESET}"
+    echo -e "${CYAN}${INFO}${NC} Starting Docker containers..."
+    echo -e "${GRAY}  ${ARROW}${NC} Launching node services"
     sleep 3
     cd /opt/remnawave
     docker compose up -d > /dev/null 2>&1 &
 
-    spinner $! "${LANG[WAITING]}"
+    spinner $! "Please wait..."
 
+    echo -e "${CYAN}${INFO}${NC} Installing camouflage template..."
     randomhtml
 
-    printf "${COLOR_YELLOW}${LANG[NODE_CHECK]}${COLOR_RESET}\n" "$SELFSTEAL_DOMAIN"
+    echo -e "${CYAN}${INFO}${NC} Checking node connection for $SELFSTEAL_DOMAIN..."
     local max_attempts=5
     local attempt=1
     local delay=15
 
     while [ $attempt -le $max_attempts ]; do
-        printf "${COLOR_YELLOW}${LANG[NODE_ATTEMPT]}${COLOR_RESET}\n" "$attempt" "$max_attempts"
+        echo -e "${GRAY}  ${ARROW}${NC} Attempt $attempt of $max_attempts..."
         if curl -s --fail --max-time 10 "https://$SELFSTEAL_DOMAIN" | grep -q "html"; then
-            echo -e "${COLOR_GREEN}${LANG[NODE_LAUNCHED]}${COLOR_RESET}"
+            echo -e "${GREEN}${CHECK}${NC} Node successfully launched!"
             break
         else
-            printf "${COLOR_RED}${LANG[NODE_UNAVAILABLE]}${COLOR_RESET}\n" "$attempt"
+            echo -e "${GRAY}  ${ARROW}${NC} Node is unavailable on attempt $attempt."
             if [ $attempt -eq $max_attempts ]; then
-                printf "${COLOR_RED}${LANG[NODE_NOT_CONNECTED]}${COLOR_RESET}\n" "$max_attempts"
-                echo -e "${COLOR_YELLOW}${LANG[CHECK_CONFIG]}${COLOR_RESET}"
+                echo -e "${RED}${CROSS}${NC} Node not connected after $max_attempts attempts!"
+                echo -e "${YELLOW}${WARNING}${NC} Check the configuration or restart the panel."
                 exit 1
             fi
             sleep $delay
         fi
         ((attempt++))
     done
-
 }
-#Install Node
 
-#Add Node to Panel
-add_node_to_panel() {
-    local domain_url="127.0.0.1:3000"
+#======================
+# MAIN ENTRY FUNCTIONS
+#======================
+
+# Main panel installation function
+install_panel() {
+    set -e
     
-    echo -e ""
-    echo -e "${COLOR_RED}${LANG[WARNING_LABEL]}${COLOR_RESET}"
-    echo -e "${COLOR_YELLOW}${LANG[WARNING_NODE_PANEL]}${COLOR_RESET}"
-    echo -e "${COLOR_YELLOW}${LANG[CONFIRM_SERVER_PANEL]}${COLOR_RESET}"
-    echo -e ""
-    echo -e "${COLOR_GREEN}[?]${COLOR_RESET} ${COLOR_YELLOW}${LANG[CONFIRM_PROMPT]}${COLOR_RESET}"
-    read confirm
+    # Path variables
+    INSTALL_DIR="/opt"
+    APP_NAME="remnawave"
+    APP_DIR="$INSTALL_DIR/$APP_NAME"
+    DATA_DIR="/var/lib/$APP_NAME"
+    COMPOSE_FILE="$APP_DIR/docker-compose.yml"
+    ENV_FILE="$APP_DIR/.env"
+
+    # System installation
+    echo
+    echo -e "${GREEN}Installing packages${NC}"
+    echo -e "${GREEN}===================${NC}"
+    echo
+    install_system_packages
+    echo -e "${GREEN}${CHECK}${NC} System packages configured!"
     echo
 
-    if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
-        echo -e "${COLOR_YELLOW}${LANG[EXIT]}${COLOR_RESET}"
-        exit 0
-    fi
+    echo
+    echo -e "${GREEN}Creating structure and certificates${NC}"
+    echo -e "${GREEN}===================================${NC}"
+    echo
+    move_variables_file
+    echo
 
-    echo -e "${COLOR_YELLOW}${LANG[ADD_NODE_TO_PANEL]}${COLOR_RESET}"
-    sleep 1
-
-    reading "${LANG[ENTER_NODE_DOMAIN]}" SELFSTEAL_DOMAIN
-    
-        while true; do
-        reading "${LANG[ENTER_NODE_NAME]}" entity_name
-        if [[ "$entity_name" =~ ^[a-zA-Z0-9-]+$ ]]; then
-            if [ ${#entity_name} -ge 3 ] && [ ${#entity_name} -le 20 ]; then
-                get_panel_token
-                token=$(cat "$TOKEN_FILE")
-                local response=$(make_api_request "GET" "http://$domain_url/api/config-profiles" "$token")
-                
-                if echo "$response" | jq -e ".response.configProfiles[] | select(.name == \"$entity_name\")" > /dev/null; then
-                    echo -e "${COLOR_RED}$(printf "${LANG[CF_INVALID_NAME]}" "$entity_name")${COLOR_RESET}"
-                else
-                    break
-                fi
-            else
-                echo -e "${COLOR_RED}${LANG[CF_INVALID_LENGTH]}${COLOR_RESET}"
-            fi
-        else
-            echo -e "${COLOR_RED}${LANG[CF_INVALID_CHARS]}${COLOR_RESET}"
-        fi
-    done
-
-    echo -e "${COLOR_YELLOW}${LANG[GENERATE_KEYS]}${COLOR_RESET}"
-    local private_key=$(generate_xray_keys "$domain_url" "$token")
-    printf "${COLOR_GREEN}${LANG[GENERATE_KEYS_SUCCESS]}${COLOR_RESET}\n"
-
-    echo -e "${COLOR_YELLOW}${LANG[CREATING_CONFIG_PROFILE]}${COLOR_RESET}"
-    read config_profile_uuid inbound_uuid <<< $(create_config_profile "$domain_url" "$token" "$entity_name" "$SELFSTEAL_DOMAIN" "$private_key" "$entity_name")
-    echo -e "${COLOR_GREEN}${LANG[CONFIG_PROFILE_CREATED]}: $entity_name${COLOR_RESET}"
-
-    printf "${COLOR_YELLOW}${LANG[CREATE_NEW_NODE]}$SELFSTEAL_DOMAIN${COLOR_RESET}\n"
-    create_node "$domain_url" "$token" "$config_profile_uuid" "$inbound_uuid" "$SELFSTEAL_DOMAIN" "$entity_name"
-
-    echo -e "${COLOR_YELLOW}${LANG[CREATE_HOST]}${COLOR_RESET}"
-    create_host "$domain_url" "$token" "$inbound_uuid" "$SELFSTEAL_DOMAIN" "$config_profile_uuid" "$entity_name"
-
-    echo -e "${COLOR_YELLOW}${LANG[GET_DEFAULT_SQUAD]}${COLOR_RESET}"
-    local squad_uuids=$(get_default_squad "$domain_url" "$token")
-    if [ $? -ne 0 ]; then
-        echo -e "${COLOR_RED}${LANG[ERROR_GET_SQUAD_LIST]}${COLOR_RESET}"
-    elif [ -z "$squad_uuids" ]; then
-        echo -e "${COLOR_YELLOW}${LANG[NO_SQUADS_TO_UPDATE]}${COLOR_RESET}"
-    else
-        for squad_uuid in $squad_uuids; do
-            echo -e "${COLOR_YELLOW}${LANG[UPDATING_SQUAD]} $squad_uuid${COLOR_RESET}"
-            update_squad "$domain_url" "$token" "$squad_uuid" "$inbound_uuid"
-            if [ $? -eq 0 ]; then
-                echo -e "${COLOR_GREEN}${LANG[UPDATE_SQUAD]} $squad_uuid${COLOR_RESET}"
-            else
-                echo -e "${COLOR_RED}${LANG[ERROR_UPDATE_SQUAD]} $squad_uuid${COLOR_RESET}"
-            fi
-        done
-    fi
-
-    echo -e "${COLOR_GREEN}${LANG[NODE_ADDED_SUCCESS]}${COLOR_RESET}"
-    echo -e "${COLOR_RED}-------------------------------------------------${COLOR_RESET}"
-    echo -e "${COLOR_RED}${LANG[POST_PANEL_INSTRUCTION]}${COLOR_RESET}"
-    echo -e "${COLOR_RED}-------------------------------------------------${COLOR_RESET}"
+    # Panel installation
+    installation_panel
 }
-#Add Node to Panel
 
-log_entry
-check_root
-check_os
+# Main node installation function
+install_node() {
+    set -e
+    
+    # Path variables
+    INSTALL_DIR="/opt"
+    APP_NAME="remnawave"
+    APP_DIR="$INSTALL_DIR/$APP_NAME"
+    DATA_DIR="/var/lib/$APP_NAME"
+    COMPOSE_FILE="$APP_DIR/docker-compose.yml"
 
-# Install packages if needed
-if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1 || ! command -v certbot >/dev/null 2>&1; then
-    install_packages || {
-        echo -e "${COLOR_RED}Failed to install packages${COLOR_RESET}"
-        exit 1
-    }
-fi
+    # System installation
+    echo
+    echo -e "${GREEN}Installing packages${NC}"
+    echo -e "${GREEN}===================${NC}"
+    echo
+    install_system_packages
+    echo -e "${GREEN}${CHECK}${NC} System packages configured!"
+    echo
 
-manage_install
+    echo
+    echo -e "${GREEN}Creating structure and certificates${NC}"
+    echo -e "${GREEN}===================================${NC}"
+    echo
+    move_variables_file
+    echo
 
+    # Node installation
+    installation_node
+
+    # Display completion info
+    echo
+    echo -e "${PURPLE}=========================${NC}"
+    echo -e "${GREEN}${CHECK}${NC} Installation complete!"
+    echo -e "${PURPLE}=========================${NC}"
+    echo
+    echo -e "${CYAN}Useful Commands:${NC}"
+    echo -e "${WHITE}• Check logs: cd /opt/remnawave && docker compose logs -f${NC}"
+    echo -e "${WHITE}• Restart service: cd /opt/remnawave && docker compose restart${NC}"
+    echo
+    echo -e "${CYAN}Next Steps:${NC}"
+    echo -e "${WHITE}1. Go to \"Node settings\" in the Remnawave panel.${NC}"
+    echo -e "${WHITE}2. Fill in the \"Name\" and \"Address\" fields.${NC}"
+    echo -e "${WHITE}3. Click \"Update Node\".${NC}"
+    echo
+}
+
+#==================
+# MAIN ENTRY POINT
+#==================
+
+# Main function
+main() {
+    log_entry
+    check_root
+    check_os
+
+    show_main_menu
+    read INSTALL_TYPE
+    
+    # Collect input variables FIRST based on choice
+    case $INSTALL_TYPE in
+        1)
+            # Panel installation - collect panel variables
+            echo
+            echo -e "${PURPLE}===================${NC}"
+            echo -e "${WHITE}Panel Installation${NC}"
+            echo -e "${PURPLE}===================${NC}"
+            echo
+            input_panel_domain
+            input_sub_domain
+            input_selfsteal_domain
+            input_cloudflare_email
+            input_cloudflare_api_key
+            
+            echo
+            echo -e "${GREEN}Environment variables${NC}"
+            echo -e "${GREEN}=====================${NC}"
+            echo
+            generate_configuration
+            echo
+            save_variables_to_file
+            ;;
+        2)
+            # Node installation - collect node variables
+            echo
+            echo -e "${PURPLE}==================${NC}"
+            echo -e "${WHITE}Node Installation${NC}"
+            echo -e "${PURPLE}==================${NC}"
+            echo
+            input_node_selfsteal_domain
+            input_panel_ip
+            input_ssl_certificate
+            
+            echo
+            echo -e "${GREEN}Environment variables${NC}"
+            echo -e "${GREEN}=====================${NC}"
+            echo
+            save_node_variables_to_file
+            ;;
+        3)
+            echo
+            echo -e "${YELLOW}${WARNING}${NC} Exiting installation..."
+            exit 0
+            ;;
+        *)
+            echo
+            echo -e "${RED}${CROSS}${NC} Invalid choice. Please select 1, 2, or 3."
+            exit 1
+            ;;
+    esac
+
+    # Now execute the installation based on choice
+    case $INSTALL_TYPE in
+        1)
+            install_panel
+            ;;
+        2)
+            install_node
+            ;;
+    esac
+}
+
+# Execute main function
+main
 exit 0
