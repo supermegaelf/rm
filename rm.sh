@@ -285,10 +285,16 @@ generate_configuration() {
     cookies_random2=$(generate_user)
     METRICS_USER=$(generate_user)
     METRICS_PASS=$(generate_user)
+
+    echo -e "${GRAY}  ${ARROW}${NC} Generating database password"
+    POSTGRES_PASSWORD=$(generate_password)
     
     echo -e "${GRAY}  ${ARROW}${NC} Generating JWT secrets"
     JWT_AUTH_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 64)
     JWT_API_TOKENS_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 64)
+
+    echo -e "${GRAY}  ${ARROW}${NC} Generating webhook secret"
+    WEBHOOK_SECRET_HEADER=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 64)
     
     echo -e "${GREEN}${CHECK}${NC} All configuration variables generated"
 }
@@ -316,6 +322,12 @@ export METRICS_PASS="$METRICS_PASS"
 # JWT secrets
 export JWT_AUTH_SECRET="$JWT_AUTH_SECRET"
 export JWT_API_TOKENS_SECRET="$JWT_API_TOKENS_SECRET"
+
+# Database password
+export POSTGRES_PASSWORD="$POSTGRES_PASSWORD"
+
+# Webhook secret
+export WEBHOOK_SECRET_HEADER="$WEBHOOK_SECRET_HEADER"
 EOF
     
     echo -e "${GRAY}  ${ARROW}${NC} Loading environment variables"
@@ -1554,8 +1566,15 @@ install_remnawave_panel() {
 APP_PORT=3000
 METRICS_PORT=3001
 
+### API ###
+# Possible values: max (start instances on all cores), number (start instances on number of cores), -1 (start instances on all cores - 1)
+# !!! Do not set this value more than physical cores count in your machine !!!
+# Review documentation: https://remna.st/docs/install/environment-variables#scaling-api
+API_INSTANCES=1
+
 ### DATABASE ###
-DATABASE_URL="postgresql://postgres:postgres@remnawave-db:5432/postgres"
+# FORMAT: postgresql://{user}:{password}@{host}:{port}/{database}
+DATABASE_URL="postgresql://remnawave:$POSTGRES_PASSWORD@remnawave-db:5432/remnawave"
 
 ### REDIS ###
 REDIS_HOST=remnawave-redis
@@ -1564,22 +1583,112 @@ REDIS_PORT=6379
 ### JWT ###
 JWT_AUTH_SECRET=$JWT_AUTH_SECRET
 JWT_API_TOKENS_SECRET=$JWT_API_TOKENS_SECRET
+
+# Set the session idle timeout in the panel to avoid daily logins.
+# Value in hours: 12–168
 JWT_AUTH_LIFETIME=168
 
+### TELEGRAM NOTIFICATIONS ###
+IS_TELEGRAM_NOTIFICATIONS_ENABLED=false
+TELEGRAM_BOT_TOKEN=change_me
+TELEGRAM_NOTIFY_USERS_CHAT_ID=change_me
+TELEGRAM_NOTIFY_NODES_CHAT_ID=change_me
+
+### Telegram Oauth (Login with Telegram)
+### Docs https://remna.st/docs/features/telegram-oauth
+### true/false
+TELEGRAM_OAUTH_ENABLED=false
+### Array of Admin Chat Ids. These ids will be allowed to login.
+TELEGRAM_OAUTH_ADMIN_IDS=[123, 321]
+
+# Optional
+# Only set if you want to use topics
+TELEGRAM_NOTIFY_USERS_THREAD_ID=
+TELEGRAM_NOTIFY_NODES_THREAD_ID=
+TELEGRAM_NOTIFY_CRM_THREAD_ID=
+
+# Enable Github OAuth2, possible values: true, false
+OAUTH2_GITHUB_ENABLED=false
+# Github client ID, you can get it from Github application settings
+OAUTH2_GITHUB_CLIENT_ID="REPLACE_WITH_YOUR_CLIENT_ID"
+# Github client secret, you can get it from Github application settings
+OAUTH2_GITHUB_CLIENT_SECRET="REPLACE_WITH_YOUR_CLIENT_SECRET"
+# List of allowed emails, separated by commas
+OAUTH2_GITHUB_ALLOWED_EMAILS=["admin@example.com", "user@example.com"]
+
+# Enable PocketID OAuth2, possible values: true, false
+OAUTH2_POCKETID_ENABLED=false
+# PocketID Client ID, you can get it from OIDC Client settings
+OAUTH2_POCKETID_CLIENT_ID="REPLACE_WITH_YOUR_CLIENT_ID"
+# PocketID Client Secret, you can get it from OIDC Client settings
+OAUTH2_POCKETID_CLIENT_SECRET="REPLACE_WITH_YOUR_CLIENT_SECRET"
+# Plain domain where PocketID is hosted, do not place any paths here. Just plain domain.
+OAUTH2_POCKETID_PLAIN_DOMAIN="pocketid.domain.com"
+# List of allowed emails, separated by commas
+OAUTH2_POCKETID_ALLOWED_EMAILS=["admin@example.com", "user@example.com"]
+
+# Enable Yandex OAuth2, possible values: true, false
+OAUTH2_YANDEX_ENABLED=false
+# Yandex Client ID, you can get it from OIDC Client settings
+OAUTH2_YANDEX_CLIENT_ID="REPLACE_WITH_YOUR_CLIENT_ID"
+# Yandex Client Secret, you can get it from OIDC Client settings
+OAUTH2_YANDEX_CLIENT_SECRET="REPLACE_WITH_YOUR_CLIENT_SECRET"
+# List of allowed emails, separated by commas
+OAUTH2_YANDEX_ALLOWED_EMAILS=["admin@example.com", "user@example.com"]
+
 ### FRONT_END ###
+# Used by CORS, you can leave it as * or place your domain there
 FRONT_END_DOMAIN=$PANEL_DOMAIN
 
 ### SUBSCRIPTION PUBLIC DOMAIN ###
+### DOMAIN, WITHOUT HTTP/HTTPS, DO NOT ADD / AT THE END ###
+### Used in "profile-web-page-url" response header and in UI/API ###
+### Review documentation: https://remna.st/docs/install/environment-variables#domains
 SUB_PUBLIC_DOMAIN=$SUB_DOMAIN
 
+### If CUSTOM_SUB_PREFIX is set in @remnawave/subscription-page, append the same path to SUB_PUBLIC_DOMAIN. Example: SUB_PUBLIC_DOMAIN=sub-page.example.com/sub ###
+
+### SWAGGER ###
+SWAGGER_PATH=/docs
+SCALAR_PATH=/scalar
+IS_DOCS_ENABLED=true
+
 ### PROMETHEUS ###
+### Metrics are available at /api/metrics
 METRICS_USER=$METRICS_USER
 METRICS_PASS=$METRICS_PASS
 
+### WEBHOOK ###
+WEBHOOK_ENABLED=false
+### Only https:// is allowed
+WEBHOOK_URL=https://webhook.site/1234567890
+### This secret is used to sign the webhook payload, must be exact 64 characters. Only a-z, 0-9, A-Z are allowed.
+WEBHOOK_SECRET_HEADER=$WEBHOOK_SECRET_HEADER
+
+### HWID DEVICE DETECTION AND LIMITATION ###
+# Don't enable this if you don't know what you are doing.
+# Review documentation before enabling this feature.
+# https://remna.st/docs/features/hwid-device-limit/
+HWID_DEVICE_LIMIT_ENABLED=false
+HWID_FALLBACK_DEVICE_LIMIT=5
+HWID_MAX_DEVICES_ANNOUNCE="You have reached the maximum number of devices for your subscription."
+
+### Bandwidth usage reached notifications
+BANDWIDTH_USAGE_NOTIFICATIONS_ENABLED=false
+# Only in ASC order (example: [60, 80]), must be valid array of integer(min: 25, max: 95) numbers. No more than 5 values.
+BANDWIDTH_USAGE_NOTIFICATIONS_THRESHOLD=[60, 80]
+
+### CLOUDFLARE ###
+# USED ONLY FOR docker-compose-prod-with-cf.yml
+# NOT USED BY THE APP ITSELF
+CLOUDFLARE_TOKEN=ey...
+
 ### Database ###
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_DB=postgres
+### For Postgres Docker container ###
+# NOT USED BY THE APP ITSELF
+POSTGRES_USER=remnawave
+POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+POSTGRES_DB=remnawave
 EOL
 
     cat > docker-compose.yml <<EOL
@@ -1668,6 +1777,7 @@ services:
     restart: always
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./redirect.html:/opt/remnawave/redirect.html:ro
 EOL
 }
 
@@ -1703,7 +1813,7 @@ installation_panel() {
         SUB_CERT_DOMAIN="$SUB_DOMAIN"
     fi
 
-    echo -e "${CYAN}${INFO}${NC} Creating Docker Compose configuration..."
+    echo -e "${CYAN}${INFO}${NC} Setting up Remnawave infrastructure..."
     echo -e "${GRAY}  ${ARROW}${NC} Adding subscription page service"
     cat >> /opt/remnawave/docker-compose.yml <<EOL
     network_mode: host
@@ -1730,6 +1840,9 @@ installation_panel() {
       - '127.0.0.1:3010:3010'
     networks:
       - remnawave-network
+    volumes:
+      - ./index.html:/opt/app/frontend/index.html
+      - ./assets:/opt/app/frontend/assets
     logging:
       driver: 'json-file'
       options:
@@ -1752,6 +1865,15 @@ volumes:
     external: false
     name: remnawave-redis-data
 EOL
+
+# Download index.html
+echo -e "${GRAY}  ${ARROW}${NC} Downloading custom sub page"
+wget -P /opt/remnawave/ https://raw.githubusercontent.com/supermegaelf/rm-files/main/pages/sub/index.html > /dev/null 2>&1
+sed -i "s/redirect\.example\.com/redirect.$PANEL_DOMAIN/g" /opt/remnawave/index.html
+
+# Download redirect.html
+echo -e "${GRAY}  ${ARROW}${NC} Downloading custom redirect page"
+wget -P /opt/remnawave/ https://raw.githubusercontent.com/supermegaelf/rm-files/main/pages/redirect/redirect.html > /dev/null 2>&1
 
     echo -e "${GRAY}  ${ARROW}${NC} Configuring SSL and proxy settings"
     cat > /opt/remnawave/nginx.conf <<EOL
@@ -1857,6 +1979,21 @@ server {
 }
 
 server {
+    server_name redirect.$PANEL_DOMAIN;
+    listen 443 ssl;
+    http2 on;
+
+    ssl_certificate "/etc/nginx/ssl/$PANEL_DOMAIN/fullchain.pem";
+    ssl_certificate_key "/etc/nginx/ssl/$PANEL_DOMAIN/privkey.pem";
+    ssl_trusted_certificate "/etc/nginx/ssl/$PANEL_DOMAIN/fullchain.pem";
+    
+    location / {
+        root /opt/remnawave;
+        index redirect.html;
+    }
+}
+
+server {
     listen 443 ssl default_server;
     server_name _;
     ssl_reject_handshake on;
@@ -1866,7 +2003,7 @@ EOL
     echo -e "${GRAY}  ${ARROW}${NC} Starting Docker containers"
     cd /opt/remnawave
     docker compose up -d > /dev/null 2>&1
-    echo -e "${GREEN}${CHECK}${NC} Docker containers started successfully"
+    echo -e "${GREEN}${CHECK}${NC} Infrastructure set up successfully"
     echo
     echo -e "${CYAN}${INFO}${NC} Setting up Remnawave panel..."
     echo -e "${GRAY}  ${ARROW}${NC} Waiting for containers to start"
