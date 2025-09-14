@@ -292,6 +292,9 @@ generate_configuration() {
     echo -e "${GRAY}  ${ARROW}${NC} Generating JWT secrets"
     JWT_AUTH_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 64)
     JWT_API_TOKENS_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 64)
+
+    echo -e "${GRAY}  ${ARROW}${NC} Generating webhook secret"
+    WEBHOOK_SECRET_HEADER=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 64)
     
     echo -e "${GREEN}${CHECK}${NC} All configuration variables generated"
 }
@@ -322,6 +325,9 @@ export JWT_API_TOKENS_SECRET="$JWT_API_TOKENS_SECRET"
 
 # Database password
 export POSTGRES_PASSWORD="$POSTGRES_PASSWORD"
+
+# Webhook secret
+export WEBHOOK_SECRET_HEADER="$WEBHOOK_SECRET_HEADER"
 EOF
     
     echo -e "${GRAY}  ${ARROW}${NC} Loading environment variables"
@@ -1657,7 +1663,7 @@ WEBHOOK_ENABLED=false
 ### Only https:// is allowed
 WEBHOOK_URL=https://webhook.site/1234567890
 ### This secret is used to sign the webhook payload, must be exact 64 characters. Only a-z, 0-9, A-Z are allowed.
-WEBHOOK_SECRET_HEADER=vsmu67Kmg6R8FjIOF1WUY8LWBHie4scdEqrfsKmyf4IAf8dY3nFS0wwYHkhh6ZvQ
+WEBHOOK_SECRET_HEADER=$WEBHOOK_SECRET_HEADER
 
 ### HWID DEVICE DETECTION AND LIMITATION ###
 # Don't enable this if you don't know what you are doing.
