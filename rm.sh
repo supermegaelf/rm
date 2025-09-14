@@ -285,6 +285,9 @@ generate_configuration() {
     cookies_random2=$(generate_user)
     METRICS_USER=$(generate_user)
     METRICS_PASS=$(generate_user)
+
+    echo -e "${GRAY}  ${ARROW}${NC} Generating database password"
+    POSTGRES_PASSWORD=$(generate_password)
     
     echo -e "${GRAY}  ${ARROW}${NC} Generating JWT secrets"
     JWT_AUTH_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 64)
@@ -316,6 +319,9 @@ export METRICS_PASS="$METRICS_PASS"
 # JWT secrets
 export JWT_AUTH_SECRET="$JWT_AUTH_SECRET"
 export JWT_API_TOKENS_SECRET="$JWT_API_TOKENS_SECRET"
+
+# Database password
+export POSTGRES_PASSWORD="$POSTGRES_PASSWORD"
 EOF
     
     echo -e "${GRAY}  ${ARROW}${NC} Loading environment variables"
@@ -1562,7 +1568,7 @@ API_INSTANCES=1
 
 ### DATABASE ###
 # FORMAT: postgresql://{user}:{password}@{host}:{port}/{database}
-DATABASE_URL="postgresql://postgres:postgres@remnawave-db:5432/postgres"
+DATABASE_URL="postgresql://postgres:$POSTGRES_PASSWORD@remnawave-db:5432/postgres"
 
 ### REDIS ###
 REDIS_HOST=remnawave-redis
@@ -1674,9 +1680,9 @@ CLOUDFLARE_TOKEN=ey...
 ### Database ###
 ### For Postgres Docker container ###
 # NOT USED BY THE APP ITSELF
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_DB=postgres
+POSTGRES_USER=remnawave
+POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+POSTGRES_DB=remnawave
 EOL
 
     cat > docker-compose.yml <<EOL
