@@ -1574,7 +1574,7 @@ API_INSTANCES=1
 
 ### DATABASE ###
 # FORMAT: postgresql://{user}:{password}@{host}:{port}/{database}
-DATABASE_URL="postgresql://postgres:$POSTGRES_PASSWORD@remnawave-db:5432/postgres"
+DATABASE_URL="postgresql://remnawave:$POSTGRES_PASSWORD@remnawave-db:5432/remnawave"
 
 ### REDIS ###
 REDIS_HOST=remnawave-redis
