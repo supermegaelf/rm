@@ -1668,6 +1668,7 @@ services:
     restart: always
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./redirect.html:/opt/remnawave/redirect.html:ro
 EOL
 }
 
@@ -1703,7 +1704,7 @@ installation_panel() {
         SUB_CERT_DOMAIN="$SUB_DOMAIN"
     fi
 
-    echo -e "${CYAN}${INFO}${NC} Creating Docker Compose configuration..."
+    echo -e "${CYAN}${INFO}${NC} Setting up Remnawave infrastructure..."
     echo -e "${GRAY}  ${ARROW}${NC} Adding subscription page service"
     cat >> /opt/remnawave/docker-compose.yml <<EOL
     network_mode: host
@@ -1730,6 +1731,9 @@ installation_panel() {
       - '127.0.0.1:3010:3010'
     networks:
       - remnawave-network
+    volumes:
+      - ./index.html:/opt/app/frontend/index.html
+      - ./assets:/opt/app/frontend/assets
     logging:
       driver: 'json-file'
       options:
@@ -1752,6 +1756,15 @@ volumes:
     external: false
     name: remnawave-redis-data
 EOL
+
+# Download index.html
+echo -e "${GRAY}  ${ARROW}${NC} Downloading custom sub page"
+wget -P /opt/remnawave/ https://raw.githubusercontent.com/supermegaelf/rm-files/main/pages/sub/index.html > /dev/null 2>&1
+sed -i "s/redirect\.example\.com/redirect.$PANEL_DOMAIN/g" /opt/remnawave/index.html
+
+# Download redirect.html
+echo -e "${GRAY}  ${ARROW}${NC} Downloading custom redirect page"
+wget -P /opt/remnawave/ https://raw.githubusercontent.com/supermegaelf/rm-files/main/pages/redirect/redirect.html > /dev/null 2>&1
 
     echo -e "${GRAY}  ${ARROW}${NC} Configuring SSL and proxy settings"
     cat > /opt/remnawave/nginx.conf <<EOL
@@ -1857,6 +1870,21 @@ server {
 }
 
 server {
+    server_name redirect.$PANEL_DOMAIN;
+    listen 443 ssl;
+    http2 on;
+
+    ssl_certificate "/etc/nginx/ssl/$PANEL_DOMAIN/fullchain.pem";
+    ssl_certificate_key "/etc/nginx/ssl/$PANEL_DOMAIN/privkey.pem";
+    ssl_trusted_certificate "/etc/nginx/ssl/$PANEL_DOMAIN/fullchain.pem";
+    
+    location / {
+        root /opt/remnawave;
+        index redirect.html;
+    }
+}
+
+server {
     listen 443 ssl default_server;
     server_name _;
     ssl_reject_handshake on;
@@ -1866,7 +1894,7 @@ EOL
     echo -e "${GRAY}  ${ARROW}${NC} Starting Docker containers"
     cd /opt/remnawave
     docker compose up -d > /dev/null 2>&1
-    echo -e "${GREEN}${CHECK}${NC} Docker containers started successfully"
+    echo -e "${GREEN}${CHECK}${NC} Infrastructure set up successfully"
     echo
     echo -e "${CYAN}${INFO}${NC} Setting up Remnawave panel..."
     echo -e "${GRAY}  ${ARROW}${NC} Waiting for containers to start"
