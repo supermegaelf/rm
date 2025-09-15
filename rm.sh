@@ -678,9 +678,9 @@ get_certificates() {
     printf "${YELLOW}Generating wildcard certificates for %s${NC}\n" "$DOMAIN"
 
     mkdir -p ~/.secrets/certbot
-    cat > ~/.secrets/certbot/cloudflare.ini <<EOL
+    cat > ~/.secrets/certbot/cloudflare.ini <<EOF
 dns_cloudflare_api_token = $CLOUDFLARE_API_KEY
-EOL
+EOF
     chmod 600 ~/.secrets/certbot/cloudflare.ini
 
     certbot certonly \
