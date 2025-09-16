@@ -194,43 +194,6 @@ input_cloudflare_email() {
     done
 }
 
-input_cloudflare_credentials_optional() {
-    local panel_domain=$1
-    local sub_domain=$2
-    local selfsteal_domain=$3
-    local panel_base=$(extract_domain "$panel_domain")
-    local sub_base=$(extract_domain "$sub_domain")
-    local selfsteal_base=$(extract_domain "$selfsteal_domain")
-    local need_certs=false
-
-    if [ ! -d "/etc/letsencrypt/live/$panel_base" ] || ! is_wildcard_cert "$panel_base"; then
-        need_certs=true
-    fi
-    if [ ! -d "/etc/letsencrypt/live/$sub_base" ] || ! is_wildcard_cert "$sub_base"; then
-        need_certs=true
-    fi
-    if [ ! -d "/etc/letsencrypt/live/$selfsteal_base" ] || ! is_wildcard_cert "$selfsteal_base"; then
-        need_certs=true
-    fi
-
-    if [ "$need_certs" = true ]; then
-        input_cloudflare_email
-        input_cloudflare_api_key
-    else
-        echo -e "${GREEN}${CHECK}${NC} Existing wildcard certificates found for all domains"
-        echo -e "${CYAN}Do you want to provide Cloudflare credentials anyway? (y/n): ${NC}"
-        read -r provide_creds
-        if [[ "$provide_creds" =~ ^[Yy]$ ]]; then
-            input_cloudflare_email
-            input_cloudflare_api_key
-        else
-            echo -e "${YELLOW}Skipping Cloudflare credentials input.${NC}"
-            CLOUDFLARE_EMAIL=""
-            CLOUDFLARE_API_KEY=""
-        fi
-    fi
-}
-
 #======================
 # NODE INPUT FUNCTIONS
 #======================
@@ -276,18 +239,6 @@ input_ssl_certificate() {
     if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
         echo -e "${RED}${CROSS}${NC} Installation aborted by user"
         exit 1
-    fi
-}
-
-input_node_credentials_optional() {
-    local node_domain=$1
-    local node_base=$(extract_domain "$node_domain")
-
-    if [ -d "/etc/letsencrypt/live/$node_base" ] && is_wildcard_cert "$node_base"; then
-        echo -e "${GREEN}${CHECK}${NC} Existing wildcard certificate found for $node_domain"
-    else
-        input_cloudflare_email
-        input_cloudflare_api_key
     fi
 }
 
@@ -1138,7 +1089,7 @@ generate_xray_keys() {
     echo "$private_key"
 }
 
-create_node() {
+create_node_api() {
     local domain_url=$1
     local token=$2
     local config_profile_uuid=$3
@@ -1525,7 +1476,7 @@ randomhtml() {
 # PANEL INSTALLATION FUNCTIONS
 #==============================
 
-install_remnawave_panel() {
+create_panel() {
     source /opt/remnawave/remnawave-vars.sh
     
     mkdir -p /opt/remnawave && cd /opt/remnawave
@@ -1552,6 +1503,7 @@ install_remnawave_panel() {
     local PANEL_BASE_DOMAIN=$(extract_domain "$PANEL_DOMAIN")
     local SUB_BASE_DOMAIN=$(extract_domain "$SUB_DOMAIN")
 
+    declare -A unique_domains
     unique_domains["$PANEL_BASE_DOMAIN"]=1
     unique_domains["$SUB_BASE_DOMAIN"]=1
 
@@ -1835,11 +1787,8 @@ volumes:
 EOF
 }
 
-installation_panel() {
+start_panel_services() {
     sleep 1
-
-    declare -A unique_domains
-    install_remnawave_panel
 
     echo -e "${CYAN}${INFO}${NC} Setting up Remnawave infrastructure..."
 
@@ -2006,7 +1955,7 @@ EOL
     read config_profile_uuid inbound_uuid <<< $(create_config_profile "$domain_url" "$token" "StealConfig" "$SELFSTEAL_DOMAIN" "$private_key")
 
     echo -e "${GRAY}  ${ARROW}${NC} Creating node configuration"
-    create_node "$domain_url" "$token" "$config_profile_uuid" "$inbound_uuid" "$SELFSTEAL_DOMAIN"
+    create_node_api "$domain_url" "$token" "$config_profile_uuid" "$inbound_uuid" "$SELFSTEAL_DOMAIN"
 
     echo -e "${GRAY}  ${ARROW}${NC} Setting up host configuration"
     create_host "$domain_url" "$token" "$inbound_uuid" "$SELFSTEAL_DOMAIN" "$config_profile_uuid"
@@ -2021,7 +1970,7 @@ EOL
 # NODE INSTALLATION FUNCTIONS
 #=============================
 
-install_remnawave_node() {
+create_node() {
     mkdir -p /opt/remnawave && cd /opt/remnawave
 
     check_domain "$SELFSTEAL_DOMAIN" true false
@@ -2040,6 +1989,7 @@ $(echo -e "$CERTIFICATE" | sed 's/\\n$//')
 EOL
 
     local SELFSTEAL_BASE_DOMAIN=$(extract_domain "$SELFSTEAL_DOMAIN")
+    declare -A unique_domains
     unique_domains["$SELFSTEAL_BASE_DOMAIN"]=1
 
     declare -A domains_to_check
@@ -2090,11 +2040,8 @@ services:
 EOF
 }
 
-installation_node() {
+start_node_services() {
     sleep 1
-
-    declare -A unique_domains
-    install_remnawave_node
 
     local NODE_CERT_DOMAIN=$(extract_domain "$SELFSTEAL_DOMAIN")
 
@@ -2197,8 +2144,8 @@ install_panel() {
     install_system_packages
 
     echo
-    echo -e "${GREEN}Creating structure and certificates${NC}"
-    echo -e "${GREEN}===================================${NC}"
+    echo -e "${GREEN}Preparing installation${NC}"
+    echo -e "${GREEN}======================${NC}"
     echo
 
     move_variables_file
@@ -2208,7 +2155,8 @@ install_panel() {
     echo -e "${GREEN}================${NC}"
     echo
 
-    installation_panel
+    create_panel
+    start_panel_services
 
     echo
     echo -e "${PURPLE}========================${NC}"
@@ -2248,8 +2196,8 @@ install_node() {
     install_system_packages
 
     echo
-    echo -e "${GREEN}Creating structure and certificates${NC}"
-    echo -e "${GREEN}===================================${NC}"
+    echo -e "${GREEN}Preparing installation${NC}"
+    echo -e "${GREEN}======================${NC}"
     echo
 
     move_variables_file
@@ -2259,7 +2207,8 @@ install_node() {
     echo -e "${GREEN}===============${NC}"
     echo
 
-    installation_node
+    create_node
+    start_node_services
 
     echo
     echo -e "${PURPLE}========================${NC}"
@@ -2294,7 +2243,8 @@ main() {
             input_panel_domain
             input_sub_domain
             input_selfsteal_domain
-            input_cloudflare_credentials_optional "$PANEL_DOMAIN" "$SUB_DOMAIN" "$SELFSTEAL_DOMAIN"
+            input_cloudflare_email
+            input_cloudflare_api_key
             
             echo
             echo -e "${GREEN}Environment variables${NC}"
@@ -2312,7 +2262,8 @@ main() {
             echo
             input_node_selfsteal_domain
             input_panel_ip
-            input_node_credentials_optional "$NODE_SELFSTEAL_DOMAIN"
+            input_cloudflare_email
+            input_cloudflare_api_key
             input_ssl_certificate
             
             echo
