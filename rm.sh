@@ -194,6 +194,44 @@ input_cloudflare_email() {
     done
 }
 
+input_cloudflare_credentials_optional() {
+    local panel_domain=$1
+    local sub_domain=$2
+    local selfsteal_domain=$3
+    local panel_base=$(extract_domain "$panel_domain")
+    local sub_base=$(extract_domain "$sub_domain")
+    local selfsteal_base=$(extract_domain "$selfsteal_domain")
+    local need_certs=false
+
+    # Check if wildcard certificates exist for all three domains
+    if [ ! -d "/etc/letsencrypt/live/$panel_base" ] || ! is_wildcard_cert "$panel_base"; then
+        need_certs=true
+    fi
+    if [ ! -d "/etc/letsencrypt/live/$sub_base" ] || ! is_wildcard_cert "$sub_base"; then
+        need_certs=true
+    fi
+    if [ ! -d "/etc/letsencrypt/live/$selfsteal_base" ] || ! is_wildcard_cert "$selfsteal_base"; then
+        need_certs=true
+    fi
+
+    if [ "$need_certs" = true ]; then
+        input_cloudflare_email
+        input_cloudflare_api_key
+    else
+        echo -e "${GREEN}${CHECK}${NC} Existing wildcard certificates found for all domains"
+        echo -e "${CYAN}Do you want to provide Cloudflare credentials anyway? (y/n): ${NC}"
+        read -r provide_creds
+        if [[ "$provide_creds" =~ ^[Yy]$ ]]; then
+            input_cloudflare_email
+            input_cloudflare_api_key
+        else
+            echo -e "${YELLOW}Skipping Cloudflare credentials input.${NC}"
+            CLOUDFLARE_EMAIL=""
+            CLOUDFLARE_API_KEY=""
+        fi
+    fi
+}
+
 #======================
 # NODE INPUT FUNCTIONS
 #======================
@@ -233,12 +271,25 @@ input_ssl_certificate() {
         fi
     done
 
-    echo -ne "${CYAN}Are you sure the certificate is correct? (y/n): ${NC}"
+    echo -ne "${YELLOW}Are you sure the certificate is correct? (y/n): ${NC}"
     read confirm
 
     if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
         echo -e "${RED}${CROSS}${NC} Installation aborted by user"
         exit 1
+    fi
+}
+
+input_node_credentials_optional() {
+    local node_domain=$1
+    local node_base=$(extract_domain "$node_domain")
+
+    # Check if wildcard certificate exists for node domain
+    if [ -d "/etc/letsencrypt/live/$node_base" ] && is_wildcard_cert "$node_base"; then
+        echo -e "${GREEN}${CHECK}${NC} Existing wildcard certificate found for $node_domain"
+    else
+        input_cloudflare_email
+        input_cloudflare_api_key
     fi
 }
 
@@ -603,7 +654,7 @@ check_certificates() {
     local cert_dir="/etc/letsencrypt/live"
 
     if [ ! -d "$cert_dir" ]; then
-        echo -e "${RED}Certificate not found for domain $DOMAIN${NC}"
+        echo -e "${GRAY}  ${ARROW}${NC} Certificate not found for $DOMAIN${NC}"
         return 1
     fi
 
@@ -613,13 +664,13 @@ check_certificates() {
         for file in "${files[@]}"; do
             local file_path="$live_dir/$file"
             if [ ! -f "$file_path" ]; then
-                echo -e "${RED}Certificate not found for domain $DOMAIN (missing $file)${NC}"
+                echo -e "${GRAY}  ${ARROW}${NC} Certificate not found for $DOMAIN (missing $file)${NC}"
                 return 1
             fi
             if [ ! -L "$file_path" ]; then
                 fix_letsencrypt_structure "$(basename "$live_dir")"
                 if [ $? -ne 0 ]; then
-                    echo -e "${RED}Certificate not found for domain $DOMAIN (failed to fix structure)${NC}"
+                    echo -e "${GRAY}  ${ARROW}${NC} Certificate not found for $DOMAIN (failed to fix structure)${NC}"
                     return 1
                 fi
             fi
@@ -637,7 +688,7 @@ check_certificates() {
         fi
     fi
 
-    echo -e "${RED}Certificate not found for domain $DOMAIN${NC}"
+    echo -e "${GRAY}  ${ARROW}${NC} Certificate not found for $DOMAIN${NC}"
     return 1
 }
 
@@ -675,26 +726,44 @@ get_certificates() {
     local BASE_DOMAIN=$(extract_domain "$DOMAIN")
     local WILDCARD_DOMAIN="*.$BASE_DOMAIN"
 
-    printf "${YELLOW}Generating wildcard certificates for %s${NC}\n" "$DOMAIN"
+    # Check if wildcard certificate already exists for the base domain
+    if [ -d "/etc/letsencrypt/live/$BASE_DOMAIN" ] && is_wildcard_cert "$BASE_DOMAIN"; then
+        echo -e "${GREEN}${CHECK}${NC} Wildcard certificate already exists for $BASE_DOMAIN"
+        return 0
+    fi
 
-    mkdir -p ~/.secrets/certbot
+    # Check if Cloudflare credentials are available
+    if [[ -z "$CLOUDFLARE_EMAIL" || -z "$CLOUDFLARE_API_KEY" ]]; then
+        echo -e "${YELLOW}WARNING: Cloudflare credentials not provided. Skipping SSL certificate generation.${NC}"
+        echo -e "${YELLOW}You can manually obtain certificates later or use existing ones.${NC}"
+        return 1
+    fi
+
+    echo -e "${GRAY}  ${ARROW}${NC} Generating wildcard certificates for $BASE_DOMAIN"
+
+    mkdir -p ~/.secrets/certbot > /dev/null 2>&1
     cat > ~/.secrets/certbot/cloudflare.ini <<EOF
 dns_cloudflare_email = $CLOUDFLARE_EMAIL
 dns_cloudflare_api_key = $CLOUDFLARE_API_KEY
 EOF
     chmod 600 ~/.secrets/certbot/cloudflare.ini
 
-    certbot certonly \
+    if certbot certonly \
         --dns-cloudflare \
         --dns-cloudflare-credentials ~/.secrets/certbot/cloudflare.ini \
-        --dns-cloudflare-propagation-seconds 60 \
+        --dns-cloudflare-propagation-seconds 30 \
         -d "$BASE_DOMAIN" \
         -d "$WILDCARD_DOMAIN" \
         --email "$CLOUDFLARE_EMAIL" \
         --agree-tos \
         --non-interactive \
         --key-type ecdsa \
-        --elliptic-curve secp384r1
+        --elliptic-curve secp384r1 > /dev/null 2>&1; then
+        echo -e "${GRAY}  ${ARROW}${NC} Successfully received certificates for $BASE_DOMAIN"
+    else
+        echo -e "${RED}  ${CROSS}${NC} Failed to generate certificates for $BASE_DOMAIN"
+        return 1
+    fi
 
     if [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
         echo -e "${RED}Certificate generation failed for $DOMAIN${NC}"
@@ -852,6 +921,8 @@ handle_certificates() {
                 cert_domains_added["$domain"]="1"
             fi
         done
+        echo -e "${GREEN}${CHECK}${NC} Certificates created successfully"
+        echo
     else
         for domain in "${!domains_to_check_ref[@]}"; do
             local base_domain=$(extract_domain "$domain")
@@ -2234,8 +2305,7 @@ main() {
             input_panel_domain
             input_sub_domain
             input_selfsteal_domain
-            input_cloudflare_email
-            input_cloudflare_api_key
+            input_cloudflare_credentials_optional "$PANEL_DOMAIN" "$SUB_DOMAIN" "$SELFSTEAL_DOMAIN"
             
             echo
             echo -e "${GREEN}Environment variables${NC}"
@@ -2253,6 +2323,7 @@ main() {
             echo
             input_node_selfsteal_domain
             input_panel_ip
+            input_node_credentials_optional "$NODE_SELFSTEAL_DOMAIN"
             input_ssl_certificate
             
             echo
