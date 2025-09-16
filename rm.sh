@@ -97,8 +97,8 @@ generate_password() {
     local upper_chars='A-Z'
     local lower_chars='a-z'
     local digit_chars='0-9'
-    local special_chars='!@#%^&*()_+'
-    local all_chars='A-Za-z0-9!@#%^&*()_+'
+    local special_chars='_+-'
+    local all_chars='A-Za-z0-9_+-'
 
     password+=$(head /dev/urandom | tr -dc "$upper_chars" | head -c 1)
     password+=$(head /dev/urandom | tr -dc "$lower_chars" | head -c 1)
@@ -679,7 +679,8 @@ get_certificates() {
 
     mkdir -p ~/.secrets/certbot
     cat > ~/.secrets/certbot/cloudflare.ini <<EOF
-dns_cloudflare_api_token = $CLOUDFLARE_API_KEY
+dns_cloudflare_email = $CLOUDFLARE_EMAIL
+dns_cloudflare_api_key = $CLOUDFLARE_API_KEY
 EOF
     chmod 600 ~/.secrets/certbot/cloudflare.ini
 
@@ -1174,29 +1175,33 @@ create_config_profile() {
                 port: 443,
                 protocol: "vless",
                 settings: { clients: [], decryption: "none" },
-                sniffing: { enabled: true, destOverride: ["http", "tls"] },
                 streamSettings: {
                     network: "tcp",
                     security: "reality",
                     realitySettings: {
+                        target: "/dev/shm/nginx.sock",
                         show: false,
                         xver: 1,
-                        dest: "/dev/shm/nginx.sock",
-                        spiderX: "",
                         shortIds: [$short_id],
                         privateKey: $private_key,
                         serverNames: [$domain]
                     }
-                }
+                },
+                sniffing: { enabled: true, destOverride: ["http", "tls", "quic"] }
             }],
             outbounds: [
                 { tag: "DIRECT", protocol: "freedom" },
-                { tag: "BLOCK", protocol: "blackhole" }
+                { tag: "BLOCK", protocol: "blackhole" },
+                { tag: "IPv4", protocol: "freedom", settings: { domainStrategy: "UseIPv4" } }
             ],
             routing: {
+                domainStrategy: "IPIfNonMatch",
                 rules: [
                     { ip: ["geoip:private"], type: "field", outboundTag: "BLOCK" },
-                    { type: "field", protocol: ["bittorrent"], outboundTag: "BLOCK" }
+                    { type: "field", domain: ["geosite:google"], outboundTag: "IPv4" },
+                    { type: "field", protocol: ["bittorrent"], outboundTag: "DIRECT" },
+                    { type: "field", domain: ["geosite:category-gov-ru"], outboundTag: "BLOCK" },
+                    { type: "field", domain: ["geosite:category-ads-all"], outboundTag: "BLOCK" }
                 ]
             }
         }
