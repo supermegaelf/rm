@@ -203,7 +203,6 @@ input_cloudflare_credentials_optional() {
     local selfsteal_base=$(extract_domain "$selfsteal_domain")
     local need_certs=false
 
-    # Check if wildcard certificates exist for all three domains
     if [ ! -d "/etc/letsencrypt/live/$panel_base" ] || ! is_wildcard_cert "$panel_base"; then
         need_certs=true
     fi
@@ -284,7 +283,6 @@ input_node_credentials_optional() {
     local node_domain=$1
     local node_base=$(extract_domain "$node_domain")
 
-    # Check if wildcard certificate exists for node domain
     if [ -d "/etc/letsencrypt/live/$node_base" ] && is_wildcard_cert "$node_base"; then
         echo -e "${GREEN}${CHECK}${NC} Existing wildcard certificate found for $node_domain"
     else
@@ -726,13 +724,11 @@ get_certificates() {
     local BASE_DOMAIN=$(extract_domain "$DOMAIN")
     local WILDCARD_DOMAIN="*.$BASE_DOMAIN"
 
-    # Check if wildcard certificate already exists for the base domain
     if [ -d "/etc/letsencrypt/live/$BASE_DOMAIN" ] && is_wildcard_cert "$BASE_DOMAIN"; then
         echo -e "${GREEN}${CHECK}${NC} Wildcard certificate already exists for $BASE_DOMAIN"
         return 0
     fi
 
-    # Check if Cloudflare credentials are available
     if [[ -z "$CLOUDFLARE_EMAIL" || -z "$CLOUDFLARE_API_KEY" ]]; then
         echo -e "${YELLOW}WARNING: Cloudflare credentials not provided. Skipping SSL certificate generation.${NC}"
         echo -e "${YELLOW}You can manually obtain certificates later or use existing ones.${NC}"
@@ -1436,9 +1432,9 @@ randomhtml() {
         selected_url=${template_urls[$RANDOM % ${#template_urls[@]}]}
     else
         if [ "$template_source" = "simple" ]; then
-            selected_url=${template_urls[0]}  # Simple web templates
+            selected_url=${template_urls[0]}
         else
-            selected_url=${template_urls[1]}  # Sni templates
+            selected_url=${template_urls[1]}
         fi
     fi
 
@@ -1559,13 +1555,11 @@ install_remnawave_panel() {
     unique_domains["$PANEL_BASE_DOMAIN"]=1
     unique_domains["$SUB_BASE_DOMAIN"]=1
 
-    # Handle certificates first
     declare -A domains_to_check
     domains_to_check["$PANEL_DOMAIN"]=1
     domains_to_check["$SUB_DOMAIN"]=1
     handle_certificates domains_to_check "$CERT_METHOD" "$LETSENCRYPT_EMAIL"
 
-    # Determine certificate domains for docker-compose
     PANEL_CERT_DOMAIN=$(extract_domain "$PANEL_DOMAIN")
     SUB_CERT_DOMAIN=$(extract_domain "$SUB_DOMAIN")
 
@@ -2006,7 +2000,6 @@ EOL
     echo -e "${GRAY}  ${ARROW}${NC} Generating x25519 keys"
     local private_key=$(generate_xray_keys "$domain_url" "$token")
 
-    # Delete default config profile
     delete_config_profile "$domain_url" "$token"
 
     echo -e "${GRAY}  ${ARROW}${NC} Creating config profile"
@@ -2049,12 +2042,10 @@ EOL
     local SELFSTEAL_BASE_DOMAIN=$(extract_domain "$SELFSTEAL_DOMAIN")
     unique_domains["$SELFSTEAL_BASE_DOMAIN"]=1
 
-    # Handle certificates first
     declare -A domains_to_check
     domains_to_check["$SELFSTEAL_DOMAIN"]=1
     handle_certificates domains_to_check "$CERT_METHOD" "$LETSENCRYPT_EMAIL"
 
-    # Determine certificate domain for docker-compose
     NODE_CERT_DOMAIN=$(extract_domain "$SELFSTEAL_DOMAIN")
 
     cat > docker-compose.yml <<EOF
@@ -2105,7 +2096,6 @@ installation_node() {
     declare -A unique_domains
     install_remnawave_node
 
-    # Use the NODE_CERT_DOMAIN set by install_remnawave_node
     local NODE_CERT_DOMAIN=$(extract_domain "$SELFSTEAL_DOMAIN")
 
     echo -e "${CYAN}${INFO}${NC} Configuring Docker Compose..."
@@ -2244,7 +2234,6 @@ install_panel() {
 install_node() {
     set -e
     
-    # Path variables
     INSTALL_DIR="/opt"
     APP_NAME="remnawave"
     APP_DIR="$INSTALL_DIR/$APP_NAME"
