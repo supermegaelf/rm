@@ -111,10 +111,6 @@ generate_password() {
     echo "$password"
 }
 
-log_clear() {
-    sed -i -e 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$LOGFILE"
-}
-
 log_entry() {
     mkdir -p ${DIR_REMNAWAVE}
     LOGFILE="${DIR_REMNAWAVE}remnawave_reverse.log"
@@ -204,12 +200,12 @@ input_cloudflare_email() {
 
 input_node_selfsteal_domain() {
     echo -ne "${CYAN}Selfsteal domain (e.g., example.com): ${NC}"
-    read NODE_SELFSTEAL_DOMAIN
-    while [[ -z "$NODE_SELFSTEAL_DOMAIN" ]] || ! validate_domain "$NODE_SELFSTEAL_DOMAIN"; do
+    read SELFSTEAL_DOMAIN
+    while [[ -z "$SELFSTEAL_DOMAIN" ]] || ! validate_domain "$SELFSTEAL_DOMAIN"; do
         echo -e "${RED}${CROSS}${NC} Invalid domain! Please enter a valid domain."
         echo
         echo -ne "${CYAN}Selfsteal domain for node: ${NC}"
-        read NODE_SELFSTEAL_DOMAIN
+        read SELFSTEAL_DOMAIN
     done
 }
 
@@ -316,7 +312,7 @@ save_node_variables_to_file() {
     echo -e "${GRAY}  ${ARROW}${NC} Creating variables file"
     cat > remnawave-node-vars.sh << EOF
 # User provided node configuration
-export SELFSTEAL_DOMAIN="$NODE_SELFSTEAL_DOMAIN"
+export SELFSTEAL_DOMAIN="$SELFSTEAL_DOMAIN"
 export PANEL_IP="$PANEL_IP"
 export CERTIFICATE="$CERTIFICATE"
 EOF
@@ -676,53 +672,28 @@ check_api() {
 
 get_certificates() {
     local DOMAIN=$1
-    local CERT_METHOD=$2
-    local LETSENCRYPT_EMAIL=$3
     local BASE_DOMAIN=$(extract_domain "$DOMAIN")
     local WILDCARD_DOMAIN="*.$BASE_DOMAIN"
 
-    printf "${YELLOW}Generating certificates for %s${NC}\n" "$DOMAIN"
+    printf "${YELLOW}Generating wildcard certificates for %s${NC}\n" "$DOMAIN"
 
-    case $CERT_METHOD in
-        1)
-            # Cloudflare API (DNS-01 support wildcard)
-            echo -ne "${CYAN}Enter your Cloudflare API token or global API key: ${NC}"
-            read CLOUDFLARE_API_KEY
-            echo -ne "${CYAN}Enter your Cloudflare registered email: ${NC}"
-            read CLOUDFLARE_EMAIL
-
-            check_api
-
-            mkdir -p ~/.secrets/certbot
-            if [[ $CLOUDFLARE_API_KEY =~ [A-Z] ]]; then
-                cat > ~/.secrets/certbot/cloudflare.ini <<EOL
+    mkdir -p ~/.secrets/certbot
+    cat > ~/.secrets/certbot/cloudflare.ini <<EOF
 dns_cloudflare_api_token = $CLOUDFLARE_API_KEY
-EOL
-            else
-                cat > ~/.secrets/certbot/cloudflare.ini <<EOL
-dns_cloudflare_email = $CLOUDFLARE_EMAIL
-dns_cloudflare_api_key = $CLOUDFLARE_API_KEY
-EOL
-            fi
-            chmod 600 ~/.secrets/certbot/cloudflare.ini
+EOF
+    chmod 600 ~/.secrets/certbot/cloudflare.ini
 
-            certbot certonly \
-                --dns-cloudflare \
-                --dns-cloudflare-credentials ~/.secrets/certbot/cloudflare.ini \
-                --dns-cloudflare-propagation-seconds 60 \
-                -d "$BASE_DOMAIN" \
-                -d "$WILDCARD_DOMAIN" \
-                --email "$CLOUDFLARE_EMAIL" \
-                --agree-tos \
-                --non-interactive \
-                --key-type ecdsa \
-                --elliptic-curve secp384r1
-            ;;
-        *)
-            echo -e "${RED}Invalid certificate method${NC}"
-            exit 1
-            ;;
-    esac
+    certbot certonly \
+        --dns-cloudflare \
+        --dns-cloudflare-credentials ~/.secrets/certbot/cloudflare.ini \
+        --dns-cloudflare-propagation-seconds 60 \
+        -d "$BASE_DOMAIN" \
+        -d "$WILDCARD_DOMAIN" \
+        --email "$CLOUDFLARE_EMAIL" \
+        --agree-tos \
+        --non-interactive \
+        --key-type ecdsa \
+        --elliptic-curve secp384r1
 
     if [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
         echo -e "${RED}Certificate generation failed for $DOMAIN${NC}"
@@ -868,7 +839,7 @@ handle_certificates() {
         done
 
         for domain in "${!unique_domains[@]}"; do
-            get_certificates "$domain" "$cert_method" ""
+            get_certificates "$domain"
             if [ $? -ne 0 ]; then
                 echo -e "${RED}Certificate generation failed. Please check your input and DNS settings. $domain${NC}"
                 return 1
@@ -1506,11 +1477,21 @@ install_remnawave_panel() {
         exit 1
     fi
 
-    PANEL_BASE_DOMAIN=$(extract_domain "$PANEL_DOMAIN")
-    SUB_BASE_DOMAIN=$(extract_domain "$SUB_DOMAIN")
+    local PANEL_BASE_DOMAIN=$(extract_domain "$PANEL_DOMAIN")
+    local SUB_BASE_DOMAIN=$(extract_domain "$SUB_DOMAIN")
 
     unique_domains["$PANEL_BASE_DOMAIN"]=1
     unique_domains["$SUB_BASE_DOMAIN"]=1
+
+    # Handle certificates first
+    declare -A domains_to_check
+    domains_to_check["$PANEL_DOMAIN"]=1
+    domains_to_check["$SUB_DOMAIN"]=1
+    handle_certificates domains_to_check "$CERT_METHOD" "$LETSENCRYPT_EMAIL"
+
+    # Determine certificate domains for docker-compose
+    PANEL_CERT_DOMAIN=$(extract_domain "$PANEL_DOMAIN")
+    SUB_CERT_DOMAIN=$(extract_domain "$SUB_DOMAIN")
 
     cat > .env <<EOL
 ### APP ###
@@ -1642,7 +1623,7 @@ POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 POSTGRES_DB=remnawave
 EOL
 
-    cat > docker-compose.yml <<EOL
+    cat > docker-compose.yml <<EOF
 services:
   remnawave-db:
     image: postgres:17.6
@@ -1729,43 +1710,10 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./redirect.html:/opt/remnawave/redirect.html:ro
-EOL
-}
-
-installation_panel() {
-    sleep 1
-
-    declare -A unique_domains
-    install_remnawave_panel
-
-    declare -A domains_to_check
-    domains_to_check["$PANEL_DOMAIN"]=1
-    domains_to_check["$SUB_DOMAIN"]=1
-
-    handle_certificates domains_to_check "$CERT_METHOD" "$LETSENCRYPT_EMAIL"
-    
-    if [ -z "$CERT_METHOD" ]; then
-        local base_domain=$(extract_domain "$PANEL_DOMAIN")
-        if [ -d "/etc/letsencrypt/live/$base_domain" ] && is_wildcard_cert "$base_domain"; then
-            CERT_METHOD="1"
-        else
-            CERT_METHOD="2"
-        fi
-    fi
-
-    if [ "$CERT_METHOD" == "1" ]; then
-        local base_domain=$(extract_domain "$PANEL_DOMAIN")
-        local sub_base_domain=$(extract_domain "$SUB_DOMAIN")
-        PANEL_CERT_DOMAIN="$base_domain"
-        SUB_CERT_DOMAIN="$sub_base_domain"
-    else
-        PANEL_CERT_DOMAIN="$PANEL_DOMAIN"
-        SUB_CERT_DOMAIN="$SUB_DOMAIN"
-    fi
-
-    echo -e "${CYAN}${INFO}${NC} Setting up Remnawave infrastructure..."
-    echo -e "${GRAY}  ${ARROW}${NC} Adding subscription page service"
-    cat >> /opt/remnawave/docker-compose.yml <<EOL
+      - /etc/letsencrypt/live/${PANEL_CERT_DOMAIN}/fullchain.pem:/etc/nginx/ssl/${PANEL_CERT_DOMAIN}/fullchain.pem:ro
+      - /etc/letsencrypt/live/${PANEL_CERT_DOMAIN}/privkey.pem:/etc/nginx/ssl/${PANEL_CERT_DOMAIN}/privkey.pem:ro
+      - /etc/letsencrypt/live/${SUB_CERT_DOMAIN}/fullchain.pem:/etc/nginx/ssl/${SUB_CERT_DOMAIN}/fullchain.pem:ro
+      - /etc/letsencrypt/live/${SUB_CERT_DOMAIN}/privkey.pem:/etc/nginx/ssl/${SUB_CERT_DOMAIN}/privkey.pem:ro
     network_mode: host
     depends_on:
       - remnawave
@@ -1814,7 +1762,16 @@ volumes:
     driver: local
     external: false
     name: remnawave-redis-data
-EOL
+EOF
+}
+
+installation_panel() {
+    sleep 1
+
+    declare -A unique_domains
+    install_remnawave_panel
+
+    echo -e "${CYAN}${INFO}${NC} Setting up Remnawave infrastructure..."
 
 echo -e "${GRAY}  ${ARROW}${NC} Downloading custom sub page"
 wget -P /opt/remnawave/ https://raw.githubusercontent.com/supermegaelf/rm-files/main/pages/sub/index.html > /dev/null 2>&1
@@ -2013,10 +1970,18 @@ APP_PORT=2222
 $(echo -e "$CERTIFICATE" | sed 's/\\n$//')
 EOL
 
-    SELFSTEAL_BASE_DOMAIN=$(extract_domain "$SELFSTEAL_DOMAIN")
+    local SELFSTEAL_BASE_DOMAIN=$(extract_domain "$SELFSTEAL_DOMAIN")
     unique_domains["$SELFSTEAL_BASE_DOMAIN"]=1
 
-    cat > docker-compose.yml <<EOL
+    # Handle certificates first
+    declare -A domains_to_check
+    domains_to_check["$SELFSTEAL_DOMAIN"]=1
+    handle_certificates domains_to_check "$CERT_METHOD" "$LETSENCRYPT_EMAIL"
+
+    # Determine certificate domain for docker-compose
+    NODE_CERT_DOMAIN=$(extract_domain "$SELFSTEAL_DOMAIN")
+
+    cat > docker-compose.yml <<EOF
 services:
   remnawave-nginx:
     image: nginx:1.28
@@ -2025,41 +1990,10 @@ services:
     restart: always
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-EOL
-}
-
-installation_node() {
-    sleep 1
-
-    declare -A unique_domains
-    install_remnawave_node
-
-    declare -A domains_to_check
-    domains_to_check["$SELFSTEAL_DOMAIN"]=1
-
-    handle_certificates domains_to_check "$CERT_METHOD" "$LETSENCRYPT_EMAIL"
-
-    if [ -z "$CERT_METHOD" ]; then
-        local base_domain=$(extract_domain "$SELFSTEAL_DOMAIN")
-        if [ -d "/etc/letsencrypt/live/$base_domain" ] && is_wildcard_cert "$base_domain"; then
-            CERT_METHOD="1"
-        else
-            CERT_METHOD="2"
-        fi
-    fi
-
-    if [ "$CERT_METHOD" == "1" ]; then
-        local base_domain=$(extract_domain "$SELFSTEAL_DOMAIN")
-        NODE_CERT_DOMAIN="$base_domain"
-    else
-        NODE_CERT_DOMAIN="$SELFSTEAL_DOMAIN"
-    fi
-
-    echo -e "${CYAN}${INFO}${NC} Configuring Docker Compose..."
-    echo -e "${GRAY}  ${ARROW}${NC} Adding node services"
-    cat >> /opt/remnawave/docker-compose.yml <<EOL
       - /dev/shm:/dev/shm:rw
       - /var/www/html:/var/www/html:ro
+      - /etc/letsencrypt/live/${NODE_CERT_DOMAIN}/fullchain.pem:/etc/nginx/ssl/${NODE_CERT_DOMAIN}/fullchain.pem:ro
+      - /etc/letsencrypt/live/${NODE_CERT_DOMAIN}/privkey.pem:/etc/nginx/ssl/${NODE_CERT_DOMAIN}/privkey.pem:ro
     command: sh -c 'rm -f /dev/shm/nginx.sock && nginx -g "daemon off;"'
     network_mode: host
     depends_on:
@@ -2086,7 +2020,19 @@ installation_node() {
       options:
         max-size: '30m'
         max-file: '5'
-EOL
+EOF
+}
+
+installation_node() {
+    sleep 1
+
+    declare -A unique_domains
+    install_remnawave_node
+
+    # Use the NODE_CERT_DOMAIN set by install_remnawave_node
+    local NODE_CERT_DOMAIN=$(extract_domain "$SELFSTEAL_DOMAIN")
+
+    echo -e "${CYAN}${INFO}${NC} Configuring Docker Compose..."
 
     echo -e "${GRAY}  ${ARROW}${NC} Configuring SSL and Unix socket"
     cat > /opt/remnawave/nginx.conf <<EOL
